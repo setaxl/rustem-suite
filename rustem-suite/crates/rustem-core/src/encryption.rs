@@ -292,4 +292,60 @@ mod tests {
         let result = decrypt_json_field(&mut json, "nonexistent", &master_key);
         assert!(result.is_ok());
     }
+
+    #[test]
+    fn encrypt_json_field_non_string_value_no_change() {
+        let master_key = MasterKey::generate().unwrap();
+        let mut json = Value::Object(serde_json::Map::from_iter([
+            ("id".to_string(), Value::String("user-1".to_string())),
+            ("amount".to_string(), Value::Number(100.into())),
+        ]));
+
+        // El campo "amount" es un número, no debe cambiar
+        let result = encrypt_json_field(&mut json, "amount", &master_key);
+        assert!(result.is_ok());
+        assert_eq!(json.get("amount").unwrap(), &Value::Number(100.into()));
+    }
+
+    #[test]
+    fn decrypt_json_field_non_string_value_no_change() {
+        let master_key = MasterKey::generate().unwrap();
+        let mut json = Value::Object(serde_json::Map::from_iter([
+            ("id".to_string(), Value::String("user-1".to_string())),
+            ("amount".to_string(), Value::Number(100.into())),
+        ]));
+
+        // El campo "amount" es un número, no debe cambiar
+        let result = decrypt_json_field(&mut json, "amount", &master_key);
+        assert!(result.is_ok());
+        assert_eq!(json.get("amount").unwrap(), &Value::Number(100.into()));
+    }
+
+    #[test]
+    fn encrypt_decrypt_multiple_fields() {
+        let master_key = MasterKey::generate().unwrap();
+        let mut json = Value::Object(serde_json::Map::from_iter([
+            ("id".to_string(), Value::String("user-1".to_string())),
+            ("password_hash".to_string(), Value::String("hash1".to_string())),
+            ("email".to_string(), Value::String("user@example.com".to_string())),
+            ("phone".to_string(), Value::String("123456789".to_string())),
+        ]));
+
+        encrypt_json_field(&mut json, "password_hash", &master_key).unwrap();
+        encrypt_json_field(&mut json, "phone", &master_key).unwrap();
+
+        // Ambos campos deben estar cifrados
+        assert_ne!(json.get("password_hash").unwrap().as_str().unwrap(), "hash1");
+        assert_ne!(json.get("phone").unwrap().as_str().unwrap(), "123456789");
+
+        // email no debe cambiar
+        assert_eq!(json.get("email").unwrap(), "user@example.com");
+
+        // Descifrar ambos
+        decrypt_json_field(&mut json, "password_hash", &master_key).unwrap();
+        decrypt_json_field(&mut json, "phone", &master_key).unwrap();
+
+        assert_eq!(json.get("password_hash").unwrap(), "hash1");
+        assert_eq!(json.get("phone").unwrap(), "123456789");
+    }
 }
