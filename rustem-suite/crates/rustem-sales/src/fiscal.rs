@@ -106,4 +106,48 @@ mod tests {
         assert_eq!(inv.igtf_cents, 0);
         assert_eq!(inv.total_cents, 11600);
     }
+
+    #[test]
+    fn calculate_iva_zero_amount() {
+        assert_eq!(TaxEngine::calculate_iva(0, IvaRate::General), 0);
+    }
+
+    #[test]
+    fn calculate_iva_large_amount() {
+        assert_eq!(TaxEngine::calculate_iva(1000000, IvaRate::General), 160000);
+    }
+
+    #[test]
+    fn calculate_igtf_zero_amount() {
+        assert_eq!(TaxEngine::calculate_igtf(0, 3), 0);
+    }
+
+    #[test]
+    fn calculate_igtf_large_amount() {
+        assert_eq!(TaxEngine::calculate_igtf(1000000, 3), 30000);
+    }
+
+    #[test]
+    fn apply_to_invoice_with_igtf() {
+        let mut inv = Invoice {
+            id: "f2".to_string(),
+            order_id: None,
+            customer_id: "c1".to_string(),
+            series: "001".to_string(),
+            number: 2,
+            control_number: "001-000002".to_string(),
+            state: crate::models::DocumentState::Emitido,
+            subtotal_cents: 0,
+            iva_cents: 0,
+            igtf_cents: 0,
+            total_cents: 0,
+            currency: "USD".to_string(),
+            exchange_rate: None,
+        };
+        TaxEngine::apply_to_invoice(&mut inv, 10000, IvaRate::Reducida, 3);
+        assert_eq!(inv.subtotal_cents, 10000);
+        assert_eq!(inv.iva_cents, 800);
+        assert_eq!(inv.igtf_cents, 300);
+        assert_eq!(inv.total_cents, 11100);
+    }
 }

@@ -308,4 +308,70 @@ mod tests {
         assert!(guard.is_ip_locked(ip));
         assert!(guard.is_user_locked(user));
     }
+
+    #[test]
+    fn cleanup_stale_removes_expired_lock() {
+        let guard = BruteForceGuard::new();
+        let ip = "10.0.0.98";
+        let user = "expired_user";
+
+        // 4 fallos no bloquean; el 5to sí.
+        for _ in 1..=4 {
+            assert!(!guard.record_failure(ip, user));
+        }
+        assert!(guard.record_failure(ip, user));
+        assert!(guard.is_ip_locked(ip));
+        assert!(guard.is_user_locked(user));
+
+        // cleanup_stale no debe eliminar un bloqueo activo.
+        guard.cleanup_stale();
+        assert!(guard.is_ip_locked(ip));
+        assert!(guard.is_user_locked(user));
+    }
+
+    #[test]
+    fn ip_remaining_seconds_zero_when_not_locked() {
+        let guard = BruteForceGuard::new();
+        let ip = "10.0.0.100";
+
+        // No hay bloqueo, debe retornar 0.
+        assert_eq!(guard.ip_remaining_seconds(ip), 0);
+        assert_eq!(guard.user_remaining_seconds("user"), 0);
+    }
+
+    #[test]
+    fn record_success_on_locked_ip_resets() {
+        let guard = BruteForceGuard::new();
+        let ip = "10.0.0.101";
+        let user = "user_locked";
+
+        // 5 fallos bloquean.
+        for _ in 1..=4 {
+            assert!(!guard.record_failure(ip, user));
+        }
+        assert!(guard.record_failure(ip, user));
+        assert!(guard.is_ip_locked(ip));
+
+        // Un éxito debe reiniciar el contador.
+        guard.record_success(ip, user);
+        assert!(!guard.is_ip_locked(ip));
+        assert!(!guard.is_user_locked(user));
+    }
+
+    #[test]
+    fn record_failure_on_different_keys() {
+        let guard = BruteForceGuard::new();
+
+        // Diferentes IPs no deben afectarse mutuamente.
+        assert!(!guard.record_failure("10.0.0.1", "user1"));
+        assert!(!guard.record_failure("10.0.0.2", "user1"));
+        assert!(!guard.is_ip_locked("10.0.0.1"));
+        assert!(!guard.is_ip_locked("10.0.0.2"));
+
+        // Diferentes usuarios no deben afectarse mutuamente.
+        assert!(!guard.record_failure("10.0.0.1", "user1"));
+        assert!(!guard.record_failure("10.0.0.1", "user2"));
+        assert!(!guard.is_user_locked("user1"));
+        assert!(!guard.is_user_locked("user2"));
+    }
 }
