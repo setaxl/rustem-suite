@@ -191,6 +191,7 @@ impl zeroize::Zeroize for Money {
 mod tests {
     use super::*;
     use proptest::prelude::*;
+    use zeroize::Zeroize;
 
     #[test]
     fn money_new_and_display() {
@@ -251,6 +252,34 @@ mod tests {
             .convert(Currency::Ves, rust_decimal::Decimal::ONE)
             .unwrap();
         assert_eq!(same, m);
+    }
+
+    #[test]
+    fn money_new_rejects_negative_amount() {
+        let err = Money::new(-100, Currency::Ves).unwrap_err();
+        assert!(matches!(err, RustemError::Validation(_)));
+    }
+
+    #[test]
+    fn money_checked_mul_rejects_negative_factor() {
+        let m = Money::new(1000, Currency::Ves).unwrap();
+        let err = m.checked_mul(-1).unwrap_err();
+        assert!(matches!(err, RustemError::BusinessRule(_)));
+    }
+
+    #[test]
+    fn money_abs_returns_absolute_value() {
+        let m = Money::from_cents_unchecked(-500, Currency::Ves);
+        let abs = m.abs();
+        assert_eq!(abs.amount(), 500);
+        assert_eq!(abs.currency(), Currency::Ves);
+    }
+
+    #[test]
+    fn money_zeroize_clears_amount() {
+        let mut m = Money::from_cents_unchecked(1000, Currency::Ves);
+        m.zeroize();
+        assert_eq!(m.amount(), 0);
     }
 
     proptest! {
