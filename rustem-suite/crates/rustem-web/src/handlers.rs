@@ -206,22 +206,9 @@ pub async fn login_post(
     let conn = match &state.db {
         Some(c) => c.read().await,
         None => {
-            // Sin base de datos disponible: modo simulado para pruebas.
-            let credenciales_validas = form.email == "admin@demo.com" && form.password == "demo";
-            if credenciales_validas {
-                rate_limit::record_success(&*state.brute_force.read().await, &ip, username);
-                return redirect_with_session_cookie(&token_placeholder(), "/dashboard");
-            } else {
-                let blocked = rate_limit::check_and_record_failure(
-                    &*state.brute_force.read().await,
-                    &ip,
-                    username,
-                );
-                if let Some(status) = blocked {
-                    return Err(status);
-                }
-                return Err(StatusCode::UNAUTHORIZED);
-            }
+            // Sin base de datos disponible: no hay modo simulado con credenciales hardcoded.
+            // En producción DATABASE_URL debe estar configurado. Retornamos 503.
+            return Err(StatusCode::SERVICE_UNAVAILABLE);
         }
     };
 
@@ -376,12 +363,6 @@ fn redirect_with_session_cookie(token: &SessionToken, path: &str) -> Result<Resp
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?,
     );
     Ok(response)
-}
-
-/// Token placeholder para el modo simulado (sin base de datos).
-/// No se usa en producción; solo evita código muerto en la rama simulada.
-fn token_placeholder() -> SessionToken {
-    SessionToken("0".repeat(64))
 }
 
 /// Handler GET /registro — muestra el formulario de registro.

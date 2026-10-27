@@ -8,8 +8,7 @@
 
 use axum::body::Body;
 use axum::extract::Request;
-use http::header::SET_COOKIE;
-use http::{HeaderMap, StatusCode};
+use http::StatusCode;
 use http_body_util::BodyExt;
 use tower::ServiceExt;
 
@@ -61,36 +60,6 @@ fn post_form(uri: &str, body: &str) -> Request<Body> {
         .unwrap()
 }
 
-/// Extrae el valor de la cookie `session_token` de las cabeceras de respuesta.
-fn extract_session_cookie(headers: &HeaderMap) -> Option<String> {
-    headers
-        .get(SET_COOKIE)
-        .and_then(|v| v.to_str().ok())
-        .and_then(|v| {
-            v.split(';')
-                .find(|part| part.trim_start().starts_with("session_token="))
-                .map(|part| part.trim_start().split_once('=').unwrap().1.to_string())
-        })
-}
-
-/// Verifica que la cookie sea httpOnly, Secure y SameSite=Lax.
-fn assert_cookie_secure(cookie_value: &str, headers: &HeaderMap) {
-    let set_cookie = headers.get(SET_COOKIE).unwrap().to_str().unwrap();
-    assert!(set_cookie.contains("session_token="), "cookie no presente");
-    assert!(set_cookie.contains("HttpOnly"), "cookie no es HttpOnly");
-    assert!(set_cookie.contains("Secure"), "cookie no es Secure");
-    assert!(
-        set_cookie.contains("SameSite=Lax"),
-        "cookie no es SameSite=Lax"
-    );
-    assert!(set_cookie.contains("Path=/"), "cookie no tiene Path=/");
-    assert!(
-        !set_cookie.contains("JavaScript"),
-        "cookie no debe exponer JS"
-    );
-    let _ = cookie_value; // usado en aserciones implícitas
-}
-
 /// Verifica que el cuerpo HTML no contenga JavaScript ni atributos on*.
 fn assert_no_js(html: &str) {
     assert!(!html.contains("<script"), "HTML contiene <script");
@@ -132,26 +101,30 @@ async fn register_page_returns_200_and_no_js() {
 }
 
 #[tokio::test]
-async fn login_success_sets_secure_session_cookie() {
+async fn login_without_db_returns_service_unavailable() {
     let router = test_router().into_router();
     let resp = router
         .oneshot(post_form("/login", "email=admin@demo.com&password=demo"))
         .await
         .unwrap();
 
-    // Modo simulado: credenciales válidas -> redirección 303 a /dashboard
-    assert_eq!(resp.status(), StatusCode::SEE_OTHER);
-    assert_eq!(resp.headers().get("location").unwrap(), "/dashboard");
-
-    // La cookie de sesión debe estar presente y ser segura.
-    let headers = resp.headers();
-    let cookie = extract_session_cookie(headers).expect("debe existir cookie session_token");
-    assert!(!cookie.is_empty(), "cookie no debe estar vacía");
-    assert_cookie_secure(&cookie, headers);
+    // Sin base de datos configurada: no hay modo simulado con credenciales hardcoded.
+    // Retornamos 503 Service Unavailable.
+    assert_eq!(resp.status(), StatusCode::SERVICE_UNAVAILABLE);
 }
 
 #[tokio::test]
-async fn login_failure_returns_401() {
+async fn login_without_db_returns_service_unavailable_not_credentials() {
+    let router = test_router().into_router();
+    let resp = router
+        .oneshot(post_form("/login", "email=admin@demo.com&password=demo"))
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), StatusCode::SERVICE_UNAVAILABLE);
+}
+
+#[tokio::test]
+async fn login_without_db_returns_503() {
     let router = test_router().into_router();
     let resp = router
         .oneshot(post_form(
@@ -161,38 +134,7 @@ async fn login_failure_returns_401() {
         .await
         .unwrap();
 
-    assert_eq!(resp.status(), StatusCode::UNAUTHORIZED);
-}
-
-#[tokio::test]
-async fn login_rate_limit_blocks_after_five_failures() {
-    let router = test_router().into_router();
-
-    // 5 intentos fallidos con la misma IP y usuario.
-    for _ in 1..=5 {
-        let resp = router
-            .clone()
-            .oneshot(post_form(
-                "/login",
-                "email=bloqueado@test.com&password=wrong",
-            ))
-            .await
-            .unwrap();
-        assert!(
-            resp.status() == StatusCode::UNAUTHORIZED
-                || resp.status() == StatusCode::TOO_MANY_REQUESTS
-        );
-    }
-
-    // El 6to intento debe retornar 429 (Too Many Requests) por rate limit.
-    let resp = router
-        .oneshot(post_form(
-            "/login",
-            "email=bloqueado@test.com&password=wrong",
-        ))
-        .await
-        .unwrap();
-    assert_eq!(resp.status(), StatusCode::TOO_MANY_REQUESTS);
+    assert_eq!(resp.status(), StatusCode::SERVICE_UNAVAILABLE);
 }
 
 #[tokio::test]
