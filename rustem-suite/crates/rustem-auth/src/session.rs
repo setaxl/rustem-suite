@@ -192,4 +192,33 @@ mod tests {
         session.expires_at = now.checked_sub(time::Duration::seconds(1)).unwrap();
         assert!(SessionManager::is_expired(&session));
     }
+
+    #[test]
+    fn create_session_custom_ttl() {
+        let (session, token) = SessionManager::create_session(
+            "user-1",
+            Some("company-1"),
+            Some("192.168.1.1"),
+            Some("test-agent"),
+            3600,
+        )
+        .unwrap();
+        assert_eq!(session.user_id, "user-1");
+        assert_eq!(session.company_id.as_deref(), Some("company-1"));
+        assert_eq!(session.ip_address.as_deref(), Some("192.168.1.1"));
+        assert_eq!(session.user_agent.as_deref(), Some("test-agent"));
+        let diff = session.expires_at - session.created_at;
+        assert_eq!(diff.whole_seconds(), 3600);
+
+        // Verificar que el token tiene 64 caracteres hexadecimales
+        assert_eq!(token.0.len(), 64);
+        assert!(token.0.chars().all(|c| c.is_ascii_hexdigit()));
+    }
+
+    #[test]
+    fn session_token_zeroize() {
+        let mut token = SessionToken("test1234".to_string());
+        token.zeroize();
+        assert_eq!(token.0, "");
+    }
 }
