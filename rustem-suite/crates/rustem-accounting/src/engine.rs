@@ -97,4 +97,64 @@ mod tests {
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("no balanceado"));
     }
+
+    #[test]
+    fn create_entry_with_multiple_lines() {
+        let entry = EntryEngine::create_entry(
+            "e3",
+            "2026-01-02",
+            "Asiento complejo",
+            vec![
+                EntryEngine::debit("110101", 5000),
+                EntryEngine::debit("110201", 3000),
+                EntryEngine::credit("410101", 7000),
+                EntryEngine::credit("510101", 1000),
+            ],
+            "c1",
+        )
+        .unwrap();
+        assert!(entry.is_balanced());
+        assert_eq!(entry.lines.len(), 4);
+    }
+
+    #[test]
+    fn create_entry_with_zero_amount() {
+        let entry = EntryEngine::create_entry(
+            "e4",
+            "2026-01-03",
+            "Asiento con cero",
+            vec![
+                EntryEngine::debit("110101", 0),
+                EntryEngine::credit("410101", 0),
+            ],
+            "c1",
+        )
+        .unwrap();
+        assert!(entry.is_balanced());
+    }
+
+    #[test]
+    fn debit_creates_positive_amount() {
+        let line = EntryEngine::debit("110101", 5000);
+        assert_eq!(line.amount_cents, 5000);
+        assert_eq!(line.account_code, "110101");
+    }
+
+    #[test]
+    fn debit_converts_negative_to_positive() {
+        let line = EntryEngine::debit("110101", -5000);
+        assert_eq!(line.amount_cents, 5000);
+    }
+
+    #[test]
+    fn credit_creates_negative_amount() {
+        let line = EntryEngine::credit("410101", 5000);
+        assert_eq!(line.amount_cents, -5000);
+    }
+
+    #[test]
+    fn credit_converts_negative_to_negative() {
+        let line = EntryEngine::credit("410101", -5000);
+        assert_eq!(line.amount_cents, -5000);
+    }
 }
