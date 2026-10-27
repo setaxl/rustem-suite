@@ -149,4 +149,64 @@ mod tests {
         };
         assert_eq!(inv.total_cents, 11600);
     }
+
+    #[test]
+    fn vat_condition_all_variants() {
+        let c_ord = Customer::new("c1", "V-12345678-9", "C1", VatCondition::Ordinario);
+        let c_for = Customer::new("c2", "V-12345679-0", "C2", VatCondition::Formal);
+        let c_espe = Customer::new("c3", "V-12345680-1", "C3", VatCondition::Espe);
+        let c_no = Customer::new("c4", "V-12345681-2", "C4", VatCondition::NoSujeto);
+        assert_eq!(c_ord.vat_condition_str(), "ordinario");
+        assert_eq!(c_for.vat_condition_str(), "formal");
+        assert_eq!(c_espe.vat_condition_str(), "espe");
+        assert_eq!(c_no.vat_condition_str(), "no_sujeto");
+    }
+
+    #[test]
+    fn document_state_all_variants() {
+        let quote_borrador = Quote {
+            id: "q1".to_string(),
+            customer_id: "c1".to_string(),
+            state: DocumentState::Borrador,
+            subtotal_cents: 0,
+            iva_cents: 0,
+            igtf_cents: 0,
+            total_cents: 0,
+            currency: "VES".to_string(),
+        };
+        assert_eq!(quote_borrador.state, DocumentState::Borrador);
+
+        let quote_emitido = Quote {
+            id: "q2".to_string(),
+            customer_id: "c1".to_string(),
+            state: DocumentState::Emitido,
+            subtotal_cents: 0,
+            iva_cents: 0,
+            igtf_cents: 0,
+            total_cents: 0,
+            currency: "VES".to_string(),
+        };
+        assert_eq!(quote_emitido.state, DocumentState::Emitido);
+
+        let quote_anulado = Quote {
+            id: "q3".to_string(),
+            customer_id: "c1".to_string(),
+            state: DocumentState::Anulado,
+            subtotal_cents: 0,
+            iva_cents: 0,
+            igtf_cents: 0,
+            total_cents: 0,
+            currency: "VES".to_string(),
+        };
+        assert_eq!(quote_anulado.state, DocumentState::Anulado);
+
+        let order_pagado = Order {
+            id: "o1".to_string(),
+            quote_id: None,
+            customer_id: "c1".to_string(),
+            state: DocumentState::Pagado,
+            total_cents: 5000,
+        };
+        assert_eq!(order_pagado.state, DocumentState::Pagado);
+    }
 }
