@@ -300,4 +300,23 @@ mod tests {
         assert!(Rif::new("E-12345678-9").unwrap().is_persona_juridica());
         assert!(Rif::new("P-12345678-9").unwrap().is_persona_juridica());
     }
+
+    #[test]
+    fn rif_check_digit_validation() {
+        // V-12345678-9 es válido (dígito de control 9)
+        assert!(Rif::new("V-12345678-9").is_ok());
+        // V-12345678-0 es inválido (dígito de control incorrecto)
+        assert!(Rif::new("V-12345678-0").is_err());
+        // J-12345678-9 es válido
+        assert!(Rif::new("J-12345678-9").is_ok());
+        // J-12345678-0 es inválido (dígito de control diferente para J)
+        assert!(Rif::new("J-12345678-0").is_err());
+    }
+
+    #[test]
+    fn rif_digits_array() {
+        let rif = Rif::new("V-12345678-9").unwrap();
+        let digits = rif.digits();
+        assert_eq!(digits, [1, 2, 3, 4, 5, 6, 7, 8]);
+    }
 }
