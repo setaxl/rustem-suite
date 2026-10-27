@@ -28,6 +28,7 @@ use rustem_db::store::{SurrealStore, SurrealStoreImpl, TenantContext};
 use rustem_frontend::components::layout;
 use rustem_frontend::views;
 use rustem_inventory::{InventoryService, KardexEntry, MovementType, StockMovement};
+use rustem_accounting::{EntryEngine, models::EntryLine};
 use rustem_sales::{Customer, VatCondition};
 
 // --- Structs de formulario para inventario (Fase 3) ---
@@ -100,7 +101,7 @@ pub struct AccountForm {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-pub struct AsientoLineaForm {
+pub struct AsientoLineaFormEntry {
     pub account_code: String,
     pub amount_cents: i64,
     pub description: Option<String>,
@@ -110,7 +111,7 @@ pub struct AsientoLineaForm {
 pub struct AsientoForm {
     pub date: String,
     pub description: String,
-    pub lineas: Vec<AsientoLineaForm>,
+    pub lineas: Vec<AsientoLineaFormEntry>,
 }
 
 // --- Structs de formulario para ventas (Fase 4) ---
@@ -530,7 +531,7 @@ pub async fn logout_post(State(_state): State<AppState>, req: Request) -> Redire
 
 /// Crea un [`SurrealStoreImpl`] a partir de la conexión del estado y el
 /// contexto de tenant. Retorna `None` si no hay base de datos disponible.
-async fn get_store(state: &AppState, ctx: &TenantContext) -> Option<SurrealStoreImpl> {
+pub async fn get_store(state: &AppState, ctx: &TenantContext) -> Option<SurrealStoreImpl> {
     let conn = state.db.as_ref()?.read().await.clone();
     Some(SurrealStoreImpl::new(conn, ctx.clone()))
 }
@@ -3259,6 +3260,143 @@ pub async fn admin() -> Html<String> {
         "Administración",
         "<h2>Administración</h2><p>Tenancy, RBAC y usuarios (próximamente).</p>",
     ))
+}
+
+/// Datos para crear un asiento contable automático desde una venta o
+/// movimiento de inventario.
+#[derive(Debug, Deserialize)]
+pub struct AsientoAutoForm {
+    /// Fecha del asiento (YYYY-MM-DD).
+    pub date: String,
+    /// Descripción del asiento.
+    pub description: String,
+    /// Líneas del asiento (account_code, amount_cents, description).
+    pub lineas: Vec<AsientoLineaFormEntry>,
+}
+
+
+/// Crea un asiento contable automático desde una venta/factura.
+///
+/// Las líneas deben incluir el débito a Cuentas por Cobrar, el crédito a
+/// Ventas, el IVA débito fiscal, etc. Valida ∑débitos = ∑créditos usando
+/// EntryEngine antes de persistir.
+pub async fn asientos_crear_desde_venta(
+    State(state): State<AppState>,
+    TenantCtx(ctx): TenantCtx,
+    Form(form): Form<AsientoAutoForm>,
+) -> Result<Redirect, StatusCode> {
+    let store = match get_store(&state, &ctx).await {
+        Some(s) => s,
+        None => return Ok(Redirect::to("/contabilidad/asientos")),
+    };
+
+    if form.lineas.is_empty() {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
+    let lineas_engine: Vec<EntryLine> = form
+        .lineas
+        .iter()
+        .map(|l| EntryLine {
+            account_code: l.account_code.clone(),
+            amount_cents: l.amount_cents,
+            description: l.description.clone(),
+        })
+        .collect();
+
+    let entry = EntryEngine::create_entry(
+        format!("auto-{}", uuid::Uuid::new_v4()),
+        &form.date,
+        &form.description,
+        lineas_engine,
+        &ctx.tenant_id,
+    )
+    .map_err(|_| StatusCode::BAD_REQUEST)?;
+
+    let lines_json: Vec<Value> = form
+        .lineas
+        .iter()
+        .map(|l| {
+            serde_json::json!({
+                "account_code": l.account_code,
+                "amount_cents": l.amount_cents,
+                "description": l.description
+            })
+        })
+        .collect();
+
+    store
+        .create_journal_entry(
+            &entry.id,
+            &form.date,
+            &form.description,
+            serde_json::json!(lines_json),
+            ctx.user_id.as_deref(),
+        )
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(Redirect::to("/contabilidad/asientos"))
+}
+
+/// Crea un asiento contable automático desde un movimiento de inventario.
+pub async fn asientos_crear_desde_movimiento(
+    State(state): State<AppState>,
+    TenantCtx(ctx): TenantCtx,
+    Form(form): Form<AsientoAutoForm>,
+) -> Result<Redirect, StatusCode> {
+    let store = match get_store(&state, &ctx).await {
+        Some(s) => s,
+        None => return Ok(Redirect::to("/contabilidad/asientos")),
+    };
+
+    if form.lineas.is_empty() {
+        return Err(StatusCode::BAD_REQUEST);
+    }
+
+    let lineas_engine: Vec<EntryLine> = form
+        .lineas
+        .iter()
+        .map(|l| EntryLine {
+            account_code: l.account_code.clone(),
+            amount_cents: l.amount_cents,
+            description: l.description.clone(),
+        })
+        .collect();
+
+    let entry = EntryEngine::create_entry(
+        format!("auto-{}", uuid::Uuid::new_v4()),
+        &form.date,
+        &form.description,
+        lineas_engine,
+        &ctx.tenant_id,
+    )
+    .map_err(|_| StatusCode::BAD_REQUEST)?;
+
+    let lines_json: Vec<Value> = form
+        .lineas
+        .iter()
+        .map(|l| {
+            serde_json::json!({
+                "account_code": l.account_code,
+                "amount_cents": l.amount_cents,
+                "description": l.description
+            })
+        })
+        .collect();
+
+    store
+        .create_journal_entry(
+            &entry.id,
+            &form.date,
+            &form.description,
+            serde_json::json!(lines_json),
+            ctx.user_id.as_deref(),
+        )
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(Redirect::to("/contabilidad/asientos"))
 }
 
 /// Emite advertencia de rate limit en los logs.

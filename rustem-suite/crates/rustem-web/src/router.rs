@@ -289,6 +289,22 @@ impl AppRouter {
             .layer(axum::middleware::from_fn(move |req, next| async move {
                 rbac_middleware("accounting", "write", req, next).await
             }));
+        let asientos_crear_desde_venta = Router::new()
+            .route(
+                "/contabilidad/asientos/crear_desde_venta",
+                post(crate::handlers::asientos_crear_desde_venta),
+            )
+            .layer(axum::middleware::from_fn(move |req, next| async move {
+                rbac_middleware("accounting", "write", req, next).await
+            }));
+        let asientos_crear_desde_movimiento = Router::new()
+            .route(
+                "/contabilidad/asientos/crear_desde_movimiento",
+                post(crate::handlers::asientos_crear_desde_movimiento),
+            )
+            .layer(axum::middleware::from_fn(move |req, next| async move {
+                rbac_middleware("accounting", "write", req, next).await
+            }));
 
         // --- Cotizaciones (RBAC: sales:read / sales:write) ---
         let cotizaciones_list = Router::new()
@@ -404,6 +420,8 @@ impl AppRouter {
             .merge(asientos_crear)
             .merge(asientos_editar)
             .merge(asientos_actualizar)
+            .merge(asientos_crear_desde_venta)
+            .merge(asientos_crear_desde_movimiento)
             .merge(cotizaciones_list)
             .merge(cotizaciones_nuevo)
             .merge(cotizaciones_crear)

@@ -40,6 +40,7 @@ rustem-admin = { path = "../rustem-admin" }
 rustem-frontend = { path = "../rustem-frontend" }
 rustem-inventory = { path = "../rustem-inventory" }
 rustem-sales = { path = "../rustem-sales" }
+rustem-accounting = { path = "../rustem-accounting" }
 
 [dev-dependencies]
 anyhow = { workspace = true }

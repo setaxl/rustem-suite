@@ -9,13 +9,13 @@
 //!
 //! Uso típico:
 //! ```rust
-//! use rustem_web::encryption_helper::{encrypt_json_field, decrypt_json_field};
+//! use rustem_web::encryption_helper::{encrypt_sensitive_field, decrypt_sensitive_field};
 //! use rustem_core::encryption::MasterKey;
 //!
 //! let master_key = MasterKey::generate().unwrap();
 //! let mut json = serde_json::json!({"password_hash": "mi-hash-plano"});
-//! encrypt_json_field(&mut json, "password_hash", &master_key).unwrap();
-//! decrypt_json_field(&mut json, "password_hash", &master_key).unwrap();
+//! encrypt_sensitive_field(&mut json, "password_hash", &master_key).unwrap();
+//! decrypt_sensitive_field(&mut json, "password_hash", &master_key).unwrap();
 //! ```
 
 use rustem_core::encryption::{decrypt_json_field, encrypt_json_field, MasterKey};
