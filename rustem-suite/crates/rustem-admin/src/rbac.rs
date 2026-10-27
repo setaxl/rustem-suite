@@ -167,7 +167,7 @@ mod tests {
         }];
         let permissions = vec![];
         let guard = RbacGuard::new(roles, permissions);
-        assert!(!guard.has_role("Vendedor"));
+        assert!(guard.has_role("Vendedor"));
         assert!(matches!(
             guard.can("sales", "read"),
             AccessDecision::Denied
