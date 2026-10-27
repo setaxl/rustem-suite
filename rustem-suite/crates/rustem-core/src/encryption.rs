@@ -14,6 +14,7 @@
 
 use chacha20poly1305::{ChaCha20Poly1305, KeyInit, Nonce, aead::Aead};
 use rand::Rng;
+use serde_json::Value;
 use zeroize::Zeroize;
 
 use crate::errors::{DomainResult, RustemError};
@@ -142,6 +143,50 @@ pub fn decrypt_field(encoded: &str, master_key: &MasterKey) -> DomainResult<Vec<
         .map_err(|e| RustemError::crypto(format!("fallo al descifrar campo: {e}")))
 }
 
+/// Cifra un campo específico en un objeto JSON y lo reemplaza con el valor
+/// cifrado codificado en hexadecimal.
+///
+/// Si el campo no existe o no es una cadena, no se modifica nada.
+///
+/// # Errores
+/// Devuelve `RustemError::Crypto` si falla el cifrado.
+pub fn encrypt_json_field(
+    value: &mut Value,
+    field_name: &str,
+    master_key: &MasterKey,
+) -> DomainResult<()> {
+    if let Some(field_value) = value.get_mut(field_name) {
+        if let Some(text) = field_value.as_str() {
+            let encrypted = encrypt_field(text.as_bytes(), master_key)?;
+            *field_value = Value::String(encrypted);
+        }
+    }
+    Ok(())
+}
+
+/// Descifra un campo cifrado en un objeto JSON.
+///
+/// Si el campo no existe o no es una cadena con formato de cifrado
+/// (hexadecimal), no se modifica nada.
+///
+/// # Errores
+/// Devuelve `RustemError::Crypto` si falla el descifrado.
+pub fn decrypt_json_field(
+    value: &mut Value,
+    field_name: &str,
+    master_key: &MasterKey,
+) -> DomainResult<()> {
+    if let Some(field_value) = value.get_mut(field_name) {
+        if let Some(text) = field_value.as_str() {
+            let decrypted = decrypt_field(text, master_key)?;
+            let decrypted_text = String::from_utf8(decrypted)
+                .map_err(|e| RustemError::crypto(format!("texto descifrado inválido: {e}")))?;
+            *field_value = Value::String(decrypted_text);
+        }
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -197,5 +242,54 @@ mod tests {
         let encoded = encrypt_field(&[], &master_key).unwrap();
         let decrypted: Vec<u8> = decrypt_field(&encoded, &master_key).unwrap();
         assert_eq!(decrypted, Vec::<u8>::new());
+    }
+
+    #[test]
+    fn encrypt_decrypt_json_field_roundtrip() {
+        let master_key = MasterKey::generate().unwrap();
+        let mut json = Value::Object(serde_json::Map::from_iter([
+            ("id".to_string(), Value::String("user-1".to_string())),
+            ("password_hash".to_string(), Value::String("argon2-hash-aqui".to_string())),
+            ("email".to_string(), Value::String("user@example.com".to_string())),
+        ]));
+
+        encrypt_json_field(&mut json, "password_hash", &master_key).unwrap();
+
+        // El campo debe estar cifrado (no es texto plano)
+        let encrypted_value = json.get("password_hash").unwrap().as_str().unwrap();
+        assert_ne!(encrypted_value, "argon2-hash-aqui");
+        assert!(encrypted_value.len() > 20); // hex de nonce + ciphertext + tag
+
+        // Otros campos no deben cambiar
+        assert_eq!(json.get("email").unwrap(), "user@example.com");
+
+        // Descifrar
+        decrypt_json_field(&mut json, "password_hash", &master_key).unwrap();
+        assert_eq!(json.get("password_hash").unwrap(), "argon2-hash-aqui");
+    }
+
+    #[test]
+    fn encrypt_json_field_missing_field_no_error() {
+        let master_key = MasterKey::generate().unwrap();
+        let mut json = Value::Object(serde_json::Map::from_iter([
+            ("id".to_string(), Value::String("user-1".to_string())),
+        ]));
+
+        // No hay campo "password_hash", no debe fallar
+        let result = encrypt_json_field(&mut json, "password_hash", &master_key);
+        assert!(result.is_ok());
+        assert!(!json.as_object().unwrap().contains_key("password_hash"));
+    }
+
+    #[test]
+    fn decrypt_json_field_missing_field_no_error() {
+        let master_key = MasterKey::generate().unwrap();
+        let mut json = Value::Object(serde_json::Map::from_iter([
+            ("id".to_string(), Value::String("user-1".to_string())),
+        ]));
+
+        // No hay campo para descifrar, no debe fallar
+        let result = decrypt_json_field(&mut json, "nonexistent", &master_key);
+        assert!(result.is_ok());
     }
 }

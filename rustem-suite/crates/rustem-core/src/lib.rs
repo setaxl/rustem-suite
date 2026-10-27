@@ -23,7 +23,7 @@ pub mod money;
 pub mod rif;
 
 pub use currency::Currency;
-pub use encryption::{MasterKey, decrypt_field, encrypt_field};
+pub use encryption::{MasterKey, decrypt_field, decrypt_json_field, encrypt_field, encrypt_json_field};
 pub use errors::{DomainResult, RustemError};
 pub use html_escape::escape_html;
 pub use money::Money;

@@ -3,6 +3,7 @@
 // Servidor Axum: rutas, handlers, middlewares y estáticos.
 // ============================================================================
 
+pub mod encryption_helper;
 pub mod handlers;
 pub mod middleware;
 pub mod router;
