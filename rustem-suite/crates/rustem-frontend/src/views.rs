@@ -8,6 +8,7 @@
 //! CERO JavaScript: solo formularios PRG y CSS puro.
 
 use rustem_auth::handlers::FlashMessage;
+use rustem_core::escape_html;
 use rustem_sales::CustomerViewData;
 
 /// Renderiza un mensaje flash como HTML (si hay alguno).
@@ -154,7 +155,8 @@ pub fn dashboard_view(user_name: &str, company_name: &str, flash: Option<&FlashM
     </main>
 </body>
 </html>"#,
-        user_name = user_name
+        user_name = escape_html(user_name),
+        company_name = escape_html(company_name)
     )
 }
 
@@ -213,10 +215,10 @@ pub fn warehouses_list_view(warehouses: &[WarehouseViewData]) -> String {
                     <a href="/almacenes/{id}/editar" class="button button-secondary" style="padding:0.25rem 0.5rem; font-size:0.875rem;">Editar</a>
                 </td>
             </tr>"#,
-            id = w.id,
-            name = w.name,
-            address = w.address.as_deref().unwrap_or("-"),
-            phone = w.phone.as_deref().unwrap_or("-"),
+            id = escape_html(&w.id),
+            name = escape_html(&w.name),
+            address = escape_html(w.address.as_deref().unwrap_or("-")),
+            phone = escape_html(w.phone.as_deref().unwrap_or("-")),
             badge = badge
         ));
     }
@@ -253,10 +255,10 @@ pub fn warehouse_form_view(warehouse: Option<&WarehouseViewData>) -> String {
             Some(w) => (
                 format!("/almacenes/{}/actualizar", w.id),
                 w.id.clone(),
-                w.name.clone(),
-                w.address.clone().unwrap_or_default(),
-                w.phone.clone().unwrap_or_default(),
-                format!("Editar Almacén: {}", w.name),
+                escape_html(&w.name),
+                escape_html(w.address.as_deref().unwrap_or_default()),
+                escape_html(w.phone.as_deref().unwrap_or_default()),
+                format!("Editar Almacén: {}", escape_html(&w.name)),
                 if w.is_active { " checked" } else { "" }.to_string(),
             ),
             None => (
@@ -331,12 +333,12 @@ pub fn products_list_view(products: &[ProductViewData]) -> String {
                     <a href="/productos/{id}/editar" class="button button-secondary" style="padding:0.25rem 0.5rem; font-size:0.875rem;">Editar</a>
                 </td>
             </tr>"#,
-            id = p.id,
-            sku = p.sku,
-            name = p.name,
+            id = escape_html(&p.id),
+            sku = escape_html(&p.sku),
+            name = escape_html(&p.name),
             vat_rate = p.vat_rate,
-            unit = p.unit,
-            category = p.category.as_deref().unwrap_or("-"),
+            unit = escape_html(&p.unit),
+            category = escape_html(p.category.as_deref().unwrap_or("-")),
         ));
     }
     format!(
@@ -372,12 +374,12 @@ pub fn product_form_view(product: Option<&ProductViewData>) -> String {
         match product {
             Some(p) => (
                 format!("/productos/{}/actualizar", p.id),
-                p.sku.clone(),
-                p.name.clone(),
+                escape_html(&p.sku),
+                escape_html(&p.name),
                 p.vat_rate,
-                p.unit.clone(),
-                p.category.clone().unwrap_or_default(),
-                format!("Editar Producto: {}", p.name),
+                escape_html(&p.unit),
+                escape_html(p.category.as_deref().unwrap_or_default()),
+                format!("Editar Producto: {}", escape_html(&p.name)),
             ),
             None => (
                 "/productos/crear".to_string(),
@@ -560,12 +562,12 @@ pub fn customer_form_view(customer: Option<&CustomerViewData>) -> String {
         Some(c) => (
             format!("/clientes/{}/actualizar", c.id),
             c.id.clone(),
-            c.rif.clone(),
-            c.name.clone(),
-            c.address.clone().unwrap_or_default(),
-            c.phone.clone().unwrap_or_default(),
-            c.email.clone().unwrap_or_default(),
-            format!("Editar Cliente: {}", c.name),
+            escape_html(&c.rif),
+            escape_html(&c.name),
+            escape_html(c.address.as_deref().unwrap_or_default()),
+            escape_html(c.phone.as_deref().unwrap_or_default()),
+            escape_html(c.email.as_deref().unwrap_or_default()),
+            format!("Editar Cliente: {}", escape_html(&c.name)),
             c.vat_condition.clone(),
         ),
         None => (
@@ -716,9 +718,9 @@ pub fn cuentas_arbol_view(accounts: &[AccountNode]) -> String {
 
 /// Renderiza un nodo de cuenta y sus hijos recursivamente usando <details>/<summary>.
 fn render_account_node(account: &AccountNode, depth: u8) -> String {
-    let code = &account.code;
-    let name = &account.name;
-    let account_type = &account.account_type;
+    let code = escape_html(&account.code);
+    let name = escape_html(&account.name);
+    let account_type = escape_html(&account.account_type);
     let badge = if account.is_active {
         "<span class=\"badge badge-success\">Activo</span>"
     } else {

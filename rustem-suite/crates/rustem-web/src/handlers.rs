@@ -23,7 +23,7 @@ use crate::state::AppState;
 use rustem_auth::handlers::{LoginRequest, RegisterRequest};
 use rustem_auth::password::PasswordHasher;
 use rustem_auth::session::{SessionManager, SessionToken};
-use rustem_core::Rif;
+use rustem_core::{Rif, escape_html};
 use rustem_db::store::{SurrealStore, SurrealStoreImpl, TenantContext};
 use rustem_frontend::components::layout;
 use rustem_frontend::views;
@@ -560,10 +560,10 @@ pub async fn almacenes_list(
 
     let mut items = String::new();
     for w in &rows {
-        let id = w.get("id").and_then(|v| v.as_str()).unwrap_or("");
-        let name = w.get("name").and_then(|v| v.as_str()).unwrap_or("");
-        let address = w.get("address").and_then(|v| v.as_str()).unwrap_or("-");
-        let phone = w.get("phone").and_then(|v| v.as_str()).unwrap_or("-");
+        let id = escape_html(w.get("id").and_then(|v| v.as_str()).unwrap_or(""));
+        let name = escape_html(w.get("name").and_then(|v| v.as_str()).unwrap_or(""));
+        let address = escape_html(w.get("address").and_then(|v| v.as_str()).unwrap_or("-"));
+        let phone = escape_html(w.get("phone").and_then(|v| v.as_str()).unwrap_or("-"));
         let is_active = w.get("is_active").and_then(|v| v.as_bool()).unwrap_or(true);
         let badge = if is_active {
             "<span class=\"badge badge-success\">Activo</span>"
@@ -707,15 +707,19 @@ pub async fn almacenes_editar(
         None => return Html(layout("Editar Almacén", "<p>Almacén no encontrado.</p>")),
     };
 
-    let name = warehouse.get("name").and_then(|v| v.as_str()).unwrap_or("");
-    let address = warehouse
-        .get("address")
-        .and_then(|v| v.as_str())
-        .unwrap_or("");
-    let phone = warehouse
-        .get("phone")
-        .and_then(|v| v.as_str())
-        .unwrap_or("");
+    let name = escape_html(warehouse.get("name").and_then(|v| v.as_str()).unwrap_or(""));
+    let address = escape_html(
+        warehouse
+            .get("address")
+            .and_then(|v| v.as_str())
+            .unwrap_or(""),
+    );
+    let phone = escape_html(
+        warehouse
+            .get("phone")
+            .and_then(|v| v.as_str())
+            .unwrap_or(""),
+    );
     let is_active = warehouse
         .get("is_active")
         .and_then(|v| v.as_bool())
@@ -826,12 +830,12 @@ pub async fn productos_list(
 
     let mut items = String::new();
     for p in &rows {
-        let id = p.get("id").and_then(|v| v.as_str()).unwrap_or("");
-        let sku = p.get("sku").and_then(|v| v.as_str()).unwrap_or("");
-        let name = p.get("name").and_then(|v| v.as_str()).unwrap_or("");
-        let vat_rate = p.get("vat_rate").and_then(|v| v.as_str()).unwrap_or("16");
-        let unit = p.get("unit").and_then(|v| v.as_str()).unwrap_or("und");
-        let category = p.get("category").and_then(|v| v.as_str()).unwrap_or("-");
+        let id = escape_html(p.get("id").and_then(|v| v.as_str()).unwrap_or(""));
+        let sku = escape_html(p.get("sku").and_then(|v| v.as_str()).unwrap_or(""));
+        let name = escape_html(p.get("name").and_then(|v| v.as_str()).unwrap_or(""));
+        let vat_rate = escape_html(p.get("vat_rate").and_then(|v| v.as_str()).unwrap_or("16"));
+        let unit = escape_html(p.get("unit").and_then(|v| v.as_str()).unwrap_or("und"));
+        let category = escape_html(p.get("category").and_then(|v| v.as_str()).unwrap_or("-"));
 
         items.push_str(&format!(
             r#"<tr>
@@ -975,24 +979,32 @@ pub async fn productos_editar(
         None => return Html(layout("Editar Producto", "<p>Producto no encontrado.</p>")),
     };
 
-    let sku = product.get("sku").and_then(|v| v.as_str()).unwrap_or("");
-    let name = product.get("name").and_then(|v| v.as_str()).unwrap_or("");
-    let description = product
-        .get("description")
-        .and_then(|v| v.as_str())
-        .unwrap_or("");
-    let unit = product
-        .get("unit")
-        .and_then(|v| v.as_str())
-        .unwrap_or("und");
-    let category = product
-        .get("category")
-        .and_then(|v| v.as_str())
-        .unwrap_or("");
-    let vat_rate = product
-        .get("vat_rate")
-        .and_then(|v| v.as_str())
-        .unwrap_or("16");
+    let sku = escape_html(product.get("sku").and_then(|v| v.as_str()).unwrap_or(""));
+    let name = escape_html(product.get("name").and_then(|v| v.as_str()).unwrap_or(""));
+    let description = escape_html(
+        product
+            .get("description")
+            .and_then(|v| v.as_str())
+            .unwrap_or(""),
+    );
+    let unit = escape_html(
+        product
+            .get("unit")
+            .and_then(|v| v.as_str())
+            .unwrap_or("und"),
+    );
+    let category = escape_html(
+        product
+            .get("category")
+            .and_then(|v| v.as_str())
+            .unwrap_or(""),
+    );
+    let vat_rate = escape_html(
+        product
+            .get("vat_rate")
+            .and_then(|v| v.as_str())
+            .unwrap_or("16"),
+    );
 
     let html = format!(
         r#"<!DOCTYPE html>
@@ -1546,17 +1558,17 @@ pub async fn clientes_list(
             Some(c) => c,
             None => continue,
         };
-        let id = customer.id;
-        let rif = customer.rif;
-        let name = customer.name;
+        let id = escape_html(&customer.id);
+        let rif = escape_html(&customer.rif);
+        let name = escape_html(&customer.name);
         let vat_condition = match customer.vat_condition {
             VatCondition::Ordinario => "ordinario",
             VatCondition::Formal => "formal",
             VatCondition::Espe => "espe",
             VatCondition::NoSujeto => "no_sujeto",
         };
-        let phone = customer.phone.unwrap_or_default();
-        let email = customer.email.unwrap_or_default();
+        let phone = escape_html(&customer.phone.unwrap_or_default());
+        let email = escape_html(&customer.email.unwrap_or_default());
 
         items.push_str(&format!(
             r#"<tr>
@@ -1699,18 +1711,22 @@ pub async fn clientes_editar(
         None => return Html(layout("Editar Cliente", "<p>Cliente no encontrado.</p>")),
     };
 
-    let rif = customer.get("rif").and_then(|v| v.as_str()).unwrap_or("");
-    let name = customer.get("name").and_then(|v| v.as_str()).unwrap_or("");
-    let vat_condition = customer
-        .get("vat_condition")
-        .and_then(|v| v.as_str())
-        .unwrap_or("ordinario");
-    let address = customer
-        .get("address")
-        .and_then(|v| v.as_str())
-        .unwrap_or("");
-    let phone = customer.get("phone").and_then(|v| v.as_str()).unwrap_or("");
-    let email = customer.get("email").and_then(|v| v.as_str()).unwrap_or("");
+    let rif = escape_html(customer.get("rif").and_then(|v| v.as_str()).unwrap_or(""));
+    let name = escape_html(customer.get("name").and_then(|v| v.as_str()).unwrap_or(""));
+    let vat_condition = escape_html(
+        customer
+            .get("vat_condition")
+            .and_then(|v| v.as_str())
+            .unwrap_or("ordinario"),
+    );
+    let address = escape_html(
+        customer
+            .get("address")
+            .and_then(|v| v.as_str())
+            .unwrap_or(""),
+    );
+    let phone = escape_html(customer.get("phone").and_then(|v| v.as_str()).unwrap_or(""));
+    let email = escape_html(customer.get("email").and_then(|v| v.as_str()).unwrap_or(""));
 
     let html = format!(
         r#"<!DOCTYPE html>
@@ -1862,11 +1878,12 @@ pub async fn cuentas_list(
 
     let mut items = String::new();
     for a in &rows {
-        let code = a.get("code").and_then(|v| v.as_str()).unwrap_or("");
-        let name = a.get("name").and_then(|v| v.as_str()).unwrap_or("");
-        let account_type = a.get("account_type").and_then(|v| v.as_str()).unwrap_or("");
+        let code = escape_html(a.get("code").and_then(|v| v.as_str()).unwrap_or(""));
+        let name = escape_html(a.get("name").and_then(|v| v.as_str()).unwrap_or(""));
+        let account_type =
+            escape_html(a.get("account_type").and_then(|v| v.as_str()).unwrap_or(""));
         let level: i64 = a.get("level").and_then(|v| v.as_i64()).unwrap_or(1);
-        let parent_code = a.get("parent_code").and_then(|v| v.as_str()).unwrap_or("-");
+        let parent_code = escape_html(a.get("parent_code").and_then(|v| v.as_str()).unwrap_or("-"));
         let is_active = a
             .get("is_operational")
             .and_then(|v| v.as_bool())
@@ -2018,15 +2035,19 @@ pub async fn cuentas_editar(
         None => return Html(layout("Editar Cuenta", "<p>Cuenta no encontrada.</p>")),
     };
 
-    let name = account.get("name").and_then(|v| v.as_str()).unwrap_or("");
-    let account_type = account
-        .get("account_type")
-        .and_then(|v| v.as_str())
-        .unwrap_or("");
-    let parent_code = account
-        .get("parent_code")
-        .and_then(|v| v.as_str())
-        .unwrap_or("");
+    let name = escape_html(account.get("name").and_then(|v| v.as_str()).unwrap_or(""));
+    let account_type = escape_html(
+        account
+            .get("account_type")
+            .and_then(|v| v.as_str())
+            .unwrap_or(""),
+    );
+    let parent_code = escape_html(
+        account
+            .get("parent_code")
+            .and_then(|v| v.as_str())
+            .unwrap_or(""),
+    );
     let is_active = account
         .get("is_operational")
         .and_then(|v| v.as_bool())
@@ -2253,9 +2274,9 @@ pub async fn asientos_list(
 
     let mut items = String::new();
     for a in &rows {
-        let id = a.get("id").and_then(|v| v.as_str()).unwrap_or("");
-        let date = a.get("date").and_then(|v| v.as_str()).unwrap_or("");
-        let description = a.get("description").and_then(|v| v.as_str()).unwrap_or("");
+        let id = escape_html(a.get("id").and_then(|v| v.as_str()).unwrap_or(""));
+        let date = escape_html(a.get("date").and_then(|v| v.as_str()).unwrap_or(""));
+        let description = escape_html(a.get("description").and_then(|v| v.as_str()).unwrap_or(""));
         let lines: &[Value] = a
             .get("lines")
             .and_then(|v| v.as_array())
@@ -2445,11 +2466,13 @@ pub async fn asientos_editar(
         None => return Html(layout("Editar Asiento", "<p>Asiento no encontrado.</p>")),
     };
 
-    let date = asiento.get("date").and_then(|v| v.as_str()).unwrap_or("");
-    let description = asiento
-        .get("description")
-        .and_then(|v| v.as_str())
-        .unwrap_or("");
+    let date = escape_html(asiento.get("date").and_then(|v| v.as_str()).unwrap_or(""));
+    let description = escape_html(
+        asiento
+            .get("description")
+            .and_then(|v| v.as_str())
+            .unwrap_or(""),
+    );
 
     let html = format!(
         r#"<!DOCTYPE html>
@@ -2582,13 +2605,14 @@ pub async fn cotizaciones_list(
 
     let mut items = String::new();
     for q in &rows {
-        let id = q.get("id").and_then(|v| v.as_str()).unwrap_or("");
-        let customer_id = q.get("customer_id").and_then(|v| v.as_str()).unwrap_or("");
+        let id = escape_html(q.get("id").and_then(|v| v.as_str()).unwrap_or(""));
+        let customer_id = escape_html(q.get("customer_id").and_then(|v| v.as_str()).unwrap_or(""));
         let total_cents: i64 = q.get("total_cents").and_then(|v| v.as_i64()).unwrap_or(0);
-        let state_str = q
-            .get("state")
-            .and_then(|v| v.as_str())
-            .unwrap_or("borrador");
+        let state_str = escape_html(
+            q.get("state")
+                .and_then(|v| v.as_str())
+                .unwrap_or("borrador"),
+        );
 
         items.push_str(&format!(
             r#"<tr>
@@ -2691,13 +2715,14 @@ pub async fn pedidos_list(
 
     let mut items = String::new();
     for o in &rows {
-        let id = o.get("id").and_then(|v| v.as_str()).unwrap_or("");
-        let customer_id = o.get("customer_id").and_then(|v| v.as_str()).unwrap_or("");
+        let id = escape_html(o.get("id").and_then(|v| v.as_str()).unwrap_or(""));
+        let customer_id = escape_html(o.get("customer_id").and_then(|v| v.as_str()).unwrap_or(""));
         let total_cents: i64 = o.get("total_cents").and_then(|v| v.as_i64()).unwrap_or(0);
-        let state_str = o
-            .get("state")
-            .and_then(|v| v.as_str())
-            .unwrap_or("borrador");
+        let state_str = escape_html(
+            o.get("state")
+                .and_then(|v| v.as_str())
+                .unwrap_or("borrador"),
+        );
 
         items.push_str(&format!(
             r#"<tr>
@@ -2778,19 +2803,21 @@ pub async fn facturas_list(
 
     let mut items = String::new();
     for f in &rows {
-        let id = f.get("id").and_then(|v| v.as_str()).unwrap_or("");
-        let customer_id = f.get("customer_id").and_then(|v| v.as_str()).unwrap_or("");
-        let series = f.get("series").and_then(|v| v.as_str()).unwrap_or("");
+        let id = escape_html(f.get("id").and_then(|v| v.as_str()).unwrap_or(""));
+        let customer_id = escape_html(f.get("customer_id").and_then(|v| v.as_str()).unwrap_or(""));
+        let series = escape_html(f.get("series").and_then(|v| v.as_str()).unwrap_or(""));
         let number: u32 = f.get("number").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
-        let control_number = f
-            .get("control_number")
-            .and_then(|v| v.as_str())
-            .unwrap_or("");
+        let control_number = escape_html(
+            f.get("control_number")
+                .and_then(|v| v.as_str())
+                .unwrap_or(""),
+        );
         let total_cents: i64 = f.get("total_cents").and_then(|v| v.as_i64()).unwrap_or(0);
-        let state_str = f
-            .get("state")
-            .and_then(|v| v.as_str())
-            .unwrap_or("borrador");
+        let state_str = escape_html(
+            f.get("state")
+                .and_then(|v| v.as_str())
+                .unwrap_or("borrador"),
+        );
 
         items.push_str(&format!(
             r#"<tr>
@@ -2891,9 +2918,9 @@ pub async fn facturas_nuevo(
 
     let mut options = String::new();
     for c in &customers {
-        let id = c.get("id").and_then(|v| v.as_str()).unwrap_or("");
-        let rif = c.get("rif").and_then(|v| v.as_str()).unwrap_or("");
-        let name = c.get("name").and_then(|v| v.as_str()).unwrap_or("");
+        let id = escape_html(c.get("id").and_then(|v| v.as_str()).unwrap_or(""));
+        let rif = escape_html(c.get("rif").and_then(|v| v.as_str()).unwrap_or(""));
+        let name = escape_html(c.get("name").and_then(|v| v.as_str()).unwrap_or(""));
         options.push_str(&format!("<option value=\"{id}\">{rif} - {name}</option>"));
     }
 
@@ -3077,12 +3104,14 @@ pub async fn factura_imprimir(
         None => return Html(layout("Factura", "<p>Factura no encontrada.</p>")),
     };
 
-    let series = invoice.get("series").and_then(|v| v.as_str()).unwrap_or("");
+    let series = escape_html(invoice.get("series").and_then(|v| v.as_str()).unwrap_or(""));
     let number: u32 = invoice.get("number").and_then(|v| v.as_u64()).unwrap_or(0) as u32;
-    let control_number = invoice
-        .get("control_number")
-        .and_then(|v| v.as_str())
-        .unwrap_or("");
+    let control_number = escape_html(
+        invoice
+            .get("control_number")
+            .and_then(|v| v.as_str())
+            .unwrap_or(""),
+    );
     let subtotal_cents: i64 = invoice
         .get("subtotal_cents")
         .and_then(|v| v.as_i64())
@@ -3099,10 +3128,12 @@ pub async fn factura_imprimir(
         .get("total_cents")
         .and_then(|v| v.as_i64())
         .unwrap_or(0);
-    let currency = invoice
-        .get("currency")
-        .and_then(|v| v.as_str())
-        .unwrap_or("VES");
+    let currency = escape_html(
+        invoice
+            .get("currency")
+            .and_then(|v| v.as_str())
+            .unwrap_or("VES"),
+    );
 
     // Formatear montos en unidades mayores.
     let format_money = |cents: i64| {

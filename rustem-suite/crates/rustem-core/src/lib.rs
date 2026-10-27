@@ -17,11 +17,13 @@
 
 pub mod currency;
 pub mod errors;
+pub mod html_escape;
 pub mod money;
 pub mod rif;
 
 pub use currency::Currency;
 pub use errors::{DomainResult, RustemError};
+pub use html_escape::escape_html;
 pub use money::Money;
 pub use rif::Rif;
 
