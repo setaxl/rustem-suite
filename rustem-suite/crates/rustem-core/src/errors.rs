@@ -109,4 +109,39 @@ mod tests {
         let e = RustemError::auth("credenciales inválidas");
         assert!(matches!(e, RustemError::Auth(_)));
     }
+
+    #[test]
+    fn error_not_found_variant() {
+        let e = RustemError::not_found("usuario no existe".to_string());
+        assert!(matches!(e, RustemError::NotFound(_)));
+        assert_eq!(e.to_string(), "Recurso no encontrado: usuario no existe");
+    }
+
+    #[test]
+    fn error_persistence_variant() {
+        let e = RustemError::persistence("error de base de datos".to_string());
+        assert!(matches!(e, RustemError::Persistence(_)));
+        assert_eq!(e.to_string(), "Error de persistencia: error de base de datos");
+    }
+
+    #[test]
+    fn error_config_variant() {
+        let e = RustemError::config("variable faltante".to_string());
+        assert!(matches!(e, RustemError::Config(_)));
+        assert_eq!(e.to_string(), "Error de configuración: variable faltante");
+    }
+
+    #[test]
+    fn error_crypto_variant() {
+        let e = RustemError::crypto("fallo de cifrado".to_string());
+        assert!(matches!(e, RustemError::Crypto(_)));
+        assert_eq!(e.to_string(), "Error criptográfico: fallo de cifrado");
+    }
+
+    #[test]
+    fn error_internal_variant() {
+        let io_err = std::io::Error::new(std::io::ErrorKind::NotFound, "archivo no encontrado");
+        let e = RustemError::Internal(io_err.into());
+        assert!(matches!(e, RustemError::Internal(_)));
+    }
 }
