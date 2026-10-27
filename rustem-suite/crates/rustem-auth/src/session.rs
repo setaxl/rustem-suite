@@ -221,4 +221,23 @@ mod tests {
         token.zeroize();
         assert_eq!(token.0, "");
     }
+
+    #[test]
+    fn session_zeroize() {
+        let mut session = Session {
+            token_hash: "hash123".to_string(),
+            user_id: "user-1".to_string(),
+            company_id: Some("company-1".to_string()),
+            expires_at: OffsetDateTime::now_utc(),
+            ip_address: Some("192.168.1.1".to_string()),
+            user_agent: Some("test-agent".to_string()),
+            created_at: OffsetDateTime::now_utc(),
+        };
+        session.zeroize();
+        assert_eq!(session.token_hash, "");
+        assert_eq!(session.user_id, "");
+        assert_eq!(session.company_id, None);
+        assert_eq!(session.ip_address, None);
+        assert_eq!(session.user_agent, None);
+    }
 }

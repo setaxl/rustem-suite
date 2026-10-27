@@ -285,4 +285,19 @@ mod tests {
             assert_eq!(rif.check_digit(), expected);
         }
     }
+
+    #[test]
+    fn rif_prefix_is_persona_natural() {
+        assert!(Rif::new("V-12345678-9").unwrap().is_persona_natural());
+        assert!(!Rif::new("J-12345678-9").unwrap().is_persona_natural());
+    }
+
+    #[test]
+    fn rif_prefix_is_persona_juridica() {
+        assert!(!Rif::new("V-12345678-9").unwrap().is_persona_juridica());
+        assert!(Rif::new("J-12345678-9").unwrap().is_persona_juridica());
+        assert!(Rif::new("G-12345678-9").unwrap().is_persona_juridica());
+        assert!(Rif::new("E-12345678-9").unwrap().is_persona_juridica());
+        assert!(Rif::new("P-12345678-9").unwrap().is_persona_juridica());
+    }
 }
