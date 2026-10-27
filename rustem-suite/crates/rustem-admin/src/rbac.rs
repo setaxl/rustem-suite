@@ -120,4 +120,83 @@ mod tests {
             AccessDecision::Denied
         ));
     }
+
+    #[test]
+    fn rbac_guard_has_role() {
+        let roles = vec![Role {
+            id: "1".to_string(),
+            name: "Administrador".to_string(),
+            description: None,
+        }];
+        let permissions = vec![];
+        let guard = RbacGuard::new(roles, permissions);
+        assert!(guard.has_role("Administrador"));
+        assert!(!guard.has_role("Contador"));
+        assert!(!guard.has_role("Vendedor"));
+        assert!(!guard.has_role("Almacenista"));
+    }
+
+    #[test]
+    fn rbac_guard_empty_roles() {
+        let roles = vec![];
+        let permissions = vec![Permission {
+            id: "1".to_string(),
+            name: "ver ventas".to_string(),
+            resource: "sales".to_string(),
+            action: "read".to_string(),
+        }];
+        let guard = RbacGuard::new(roles, permissions);
+        assert!(!guard.has_role("Vendedor"));
+        assert!(!guard.has_role("Administrador"));
+        assert!(matches!(
+            guard.can("sales", "read"),
+            AccessDecision::Allowed
+        ));
+        assert!(matches!(
+            guard.can("accounting", "read"),
+            AccessDecision::Denied
+        ));
+    }
+
+    #[test]
+    fn rbac_guard_empty_permissions() {
+        let roles = vec![Role {
+            id: "1".to_string(),
+            name: "Vendedor".to_string(),
+            description: None,
+        }];
+        let permissions = vec![];
+        let guard = RbacGuard::new(roles, permissions);
+        assert!(!guard.has_role("Vendedor"));
+        assert!(matches!(
+            guard.can("sales", "read"),
+            AccessDecision::Denied
+        ));
+    }
+
+    #[test]
+    fn rbac_guard_case_sensitive() {
+        let roles = vec![Role {
+            id: "1".to_string(),
+            name: "Administrador".to_string(),
+            description: None,
+        }];
+        let permissions = vec![Permission {
+            id: "1".to_string(),
+            name: "ver ventas".to_string(),
+            resource: "sales".to_string(),
+            action: "read".to_string(),
+        }];
+        let guard = RbacGuard::new(roles, permissions);
+        // "VENTAS" es diferente de "sales" (case sensitive)
+        assert!(matches!(
+            guard.can("VENTAS", "read"),
+            AccessDecision::Denied
+        ));
+        // "READ" es diferente de "read"
+        assert!(matches!(
+            guard.can("sales", "READ"),
+            AccessDecision::Denied
+        ));
+    }
 }
