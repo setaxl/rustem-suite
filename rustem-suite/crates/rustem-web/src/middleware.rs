@@ -16,6 +16,7 @@ pub mod tenant;
 pub use rate_limit::rate_limit_middleware;
 
 use axum::extract::Request;
+use axum::http::StatusCode;
 use axum::middleware::Next;
 use axum::response::Response;
 use http::header;
@@ -114,5 +115,81 @@ mod tests {
             headers.get(header::REFERRER_POLICY).unwrap(),
             "strict-origin-when-cross-origin"
         );
+    }
+
+    #[tokio::test]
+    async fn rbac_middleware_anonymous_tenant_passes_through() {
+        let app = Router::new()
+            .route("/test", axum::routing::get(|| async { "hola" }))
+            .layer(axum::middleware::from_fn(|req, next| async move {
+                rbac_middleware("inventory", "read", req, next).await
+            }));
+
+        let req = http::Request::builder()
+            .uri("/test")
+            .body(Body::empty())
+            .unwrap();
+
+        let resp = app.oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn rbac_middleware_with_permission_passes_through() {
+        let app = Router::new()
+            .route("/test", axum::routing::get(|| async { "hola" }))
+            .layer(axum::middleware::from_fn(move |req, next| {
+                let mut ctx = TenantContext::new("company-test");
+                ctx.permissions = vec!["inventory:read".to_string()];
+                req.extensions_mut().insert(ctx);
+                rbac_middleware("inventory", "read", req, next).await
+            }));
+
+        let req = http::Request::builder()
+            .uri("/test")
+            .body(Body::empty())
+            .unwrap();
+
+        let resp = app.oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn rbac_middleware_without_permission_returns_403() {
+        let app = Router::new()
+            .route("/test", axum::routing::get(|| async { "hola" }))
+            .layer(axum::middleware::from_fn(move |req, next| {
+                let mut ctx = TenantContext::new("company-test");
+                ctx.permissions = vec!["sales:read".to_string()];
+                req.extensions_mut().insert(ctx);
+                rbac_middleware("inventory", "read", req, next).await
+            }));
+
+        let req = http::Request::builder()
+            .uri("/test")
+            .body(Body::empty())
+            .unwrap();
+
+        let resp = app.oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::FORBIDDEN);
+    }
+
+    #[tokio::test]
+    async fn rbac_middleware_with_empty_permissions_returns_403() {
+        let app = Router::new()
+            .route("/test", axum::routing::get(|| async { "hola" }))
+            .layer(axum::middleware::from_fn(move |req, next| {
+                let ctx = TenantContext::new("company-test");
+                req.extensions_mut().insert(ctx);
+                rbac_middleware("inventory", "read", req, next).await
+            }));
+
+        let req = http::Request::builder()
+            .uri("/test")
+            .body(Body::empty())
+            .unwrap();
+
+        let resp = app.oneshot(req).await.unwrap();
+        assert_eq!(resp.status(), StatusCode::FORBIDDEN);
     }
 }
