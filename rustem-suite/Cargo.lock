@@ -4155,6 +4155,7 @@ dependencies = [
  "hyper-util",
  "rust-embed",
  "rust_decimal",
+ "rustem-accounting",
  "rustem-admin",
  "rustem-auth",
  "rustem-core",
