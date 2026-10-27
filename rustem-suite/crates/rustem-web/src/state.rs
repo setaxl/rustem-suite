@@ -91,6 +91,5 @@ mod tests {
         assert_eq!(state.base_url, "http://localhost:8080");
         assert!(state.tenant_context().is_none());
         let _ = state.brute_force;
-        let _ = ();
     }
 }
