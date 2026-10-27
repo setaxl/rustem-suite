@@ -301,7 +301,7 @@ pub async fn login_post(
         .checked_add_signed(chrono::Duration::seconds(
             rustem_auth::session::DEFAULT_SESSION_TTL_SECONDS,
         ))
-        .unwrap()
+        .ok_or(StatusCode::INTERNAL_SERVER_ERROR)?
         .to_rfc3339();
 
     let session_data = json!({
