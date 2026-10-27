@@ -122,6 +122,23 @@ impl BruteForceGuard {
         ip_blocked || user_blocked
     }
 
+    /// Elimina entradas expiradas o vacías de ambos mapas de intentos.
+    /// Las entradas con bloqueo vencido (locked_until en el pasado) y las
+    /// entradas sin intentos registrados (count == 0) se eliminan para evitar
+    /// que el mapa crezca indefinidamente.
+    pub fn cleanup_stale(&self) {
+        let now = Instant::now();
+
+        self.attempts_by_ip.lock().unwrap().retain(|_, entry| {
+            // Mantener solo entradas con intentos pendientes o bloqueo activo no vencido.
+            entry.count > 0 || entry.locked_until.map(|t| t >= now).unwrap_or(false)
+        });
+
+        self.attempts_by_user.lock().unwrap().retain(|_, entry| {
+            entry.count > 0 || entry.locked_until.map(|t| t >= now).unwrap_or(false)
+        });
+    }
+
     /// Registra un intento exitoso (reinicia contadores para IP y usuario).
     pub fn record_success(&self, ip: &str, username: &str) {
         if let Ok(mut map) = self.attempts_by_ip.lock()
@@ -245,5 +262,50 @@ mod tests {
         }
         assert!(guard.is_user_locked("user1"));
         assert!(!guard.is_ip_locked("2.2.2.2"));
+    }
+
+    #[test]
+    fn cleanup_stale_removes_empty_entries() {
+        let guard = BruteForceGuard::new();
+        let ip = "10.0.0.50";
+        let user = "testuser";
+
+        // 4 fallos no bloquean; el 5to sí.
+        for _ in 1..=4 {
+            assert!(!guard.record_failure(ip, user));
+        }
+        assert!(guard.record_failure(ip, user)); // 5to fallo bloquea
+        assert!(guard.is_ip_locked(ip));
+
+        // Un éxito resetea la entrada a estado vacío.
+        guard.record_success(ip, user);
+        assert!(!guard.is_ip_locked(ip));
+
+        // cleanup_stale debe eliminar la entrada vacía.
+        guard.cleanup_stale();
+
+        // Después de limpiar, no debe quedar rastro de la entrada.
+        assert!(!guard.is_ip_locked(ip));
+        assert_eq!(guard.ip_remaining_seconds(ip), 0);
+    }
+
+    #[test]
+    fn cleanup_stale_keeps_active_block() {
+        let guard = BruteForceGuard::new();
+        let ip = "10.0.0.99";
+        let user = "blockeduser";
+
+        // 4 fallos no bloquean; el 5to sí.
+        for _ in 1..=4 {
+            assert!(!guard.record_failure(ip, user));
+        }
+        assert!(guard.record_failure(ip, user));
+        assert!(guard.is_ip_locked(ip));
+        assert!(guard.is_user_locked(user));
+
+        // cleanup_stale no debe eliminar un bloqueo activo.
+        guard.cleanup_stale();
+        assert!(guard.is_ip_locked(ip));
+        assert!(guard.is_user_locked(user));
     }
 }
