@@ -12,9 +12,9 @@ services:
   # SurrealDB 2.x Standalone (motor transaccional ACID, SCHEMAFULL)
   # ---------------------------------------------------------------
   surrealdb:
-    image: surrealdb/surrealdb:2.2.0
+    image: docker.io/surrealdb/surrealdb:latest
     container_name: rustem-surrealdb
-    command: start --user root --pass root --log info 0.0.0.0:8000
+    command: start --user root --pass root --log info --bind 0.0.0.0:8000
     ports:
       - "8000:8000"
     volumes:
