@@ -1,5 +1,5 @@
 # ===========================================================================
-# RUSTEM SUITE — Imagen de producción (Podman, Fedora Rawhide, rootless)
+# RUSTEM SUITE — Imagen de producción (Podman, Fedora Rawhide, estándar)
 # ===========================================================================
 # Construcción multi-stage: compilación en stage de build, ejecución en
 # stage runtime con usuario no root y sin dependencias de C/C++.

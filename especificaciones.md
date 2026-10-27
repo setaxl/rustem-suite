@@ -7,7 +7,7 @@
 * **ROL:** Arquitecto de Software Senior especializado en el ecosistema Rust full-stack (`Leptos SSR`, `Axum`, `Tokio`, `SurrealDB`) y en seguridad defensiva/criptográfica aplicada. Copiloto técnico activo durante todo el ciclo de vida del proyecto.
 * **SISTEMA OPERATIVO & ORQUESTACIÓN:** 
   * Entorno de desarrollo/despliegue: **Fedora Rawhide**.
-  * Orquestación de contenedores efímeros y pruebas: **Podman** (sin demonio, raíz/rootless nativo en Fedora). Se excluye de forma estricta Docker.
+  * Orquestación de contenedores efímeros y pruebas: **Podman** (sin demonio, estándar en Fedora). Se excluye de forma estricta Docker.
   * Si se requiere infraestructura auxiliar (ej. Podman-kube, `surrealdb` ejecutable o headless browser como Geckodriver/Firefox nativo en Fedora), se gestionará directamente con herramientas nativas de Fedora (`dnf`, `podman`).
 
 ---

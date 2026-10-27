@@ -161,25 +161,14 @@ fn load_certs(path: &str) -> anyhow::Result<Vec<rustls::pki_types::CertificateDe
 /// Carga una clave privada desde un archivo PEM mediante parsing simple.
 fn load_private_key(path: &str) -> anyhow::Result<rustls::pki_types::PrivateKeyDer<'static>> {
     let content = std::fs::read_to_string(path)?;
-    let mut remaining = content.as_str();
+    let remaining = content.as_str();
     for label in ["RSA PRIVATE KEY", "PRIVATE KEY"] {
-        while let Some(b64) = extract_pem_block(remaining, label) {
-            remaining = &remaining[b64.len()..];
+        if let Some(b64) = extract_pem_block(remaining, label) {
             let der = base64::engine::general_purpose::STANDARD.decode(b64)?;
             // Box::leak para que los datos de la clave vivan para siempre
             let der_static: &'static [u8] = Box::leak(der.into_boxed_slice());
-            let pkcs1 = rustls::pki_types::PrivatePkcs1KeyDer::try_from(der_static);
-            if pkcs1.is_ok() {
-                return Ok(rustls::pki_types::PrivateKeyDer::from(pkcs1.unwrap()));
-            }
-            let pkcs8 = rustls::pki_types::PrivatePkcs8KeyDer::try_from(der_static);
-            if pkcs8.is_ok() {
-                return Ok(rustls::pki_types::PrivateKeyDer::from(pkcs8.unwrap()));
-            }
-            let sec1 = rustls::pki_types::PrivateSec1KeyDer::try_from(der_static);
-            if sec1.is_ok() {
-                return Ok(rustls::pki_types::PrivateKeyDer::from(sec1.unwrap()));
-            }
+            let pkcs1: rustls::pki_types::PrivatePkcs1KeyDer = From::from(der_static);
+            return Ok(rustls::pki_types::PrivateKeyDer::from(pkcs1));
         }
     }
     anyhow::bail!("No se encontró clave privada en {path}")

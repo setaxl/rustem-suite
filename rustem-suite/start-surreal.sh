@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ===========================================================================
-# start-surreal.sh — Inicia SurrealDB en Podman (rootless, Fedora Rawhide)
+# start-surreal.sh — Inicia SurrealDB en Podman (Fedora Rawhide, estándar)
 # ===========================================================================
 set -euo pipefail
 

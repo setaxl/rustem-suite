@@ -1,7 +1,7 @@
 # PLAN MAESTRO DE DESARROLLO — RUSTEM SUITE (2026)
 
 **Proyecto:** ERP Modular Full-Stack 100% Rust  
-**Entorno de Trabajo:** Fedora Rawhide / Podman (Rootless Container Runtime)  
+**Entorno de Trabajo:** Fedora Rawhide / Podman (Container Runtime estándar)  
 **Marco Normativo Fiscal & Contable:** VEN-NIF (GE / PYME) & SENIAT (Providencias SNAT, IGTF, Retenciones IVA/ISLR, Tasa BCV)  
 **Restricción de Frontend:** CERO JavaScript / Leptos SSR Puro  
 **Políticas Criptográficas y C++:** 100% Rust Pura (Cero librerías nativas C/C++)  
@@ -140,7 +140,7 @@
 * **F6-02 (M) — Infraestructura TLS Nativa y Contenedor Podman:**
   * Configuración de Axum con `rustls` (CERO OpenSSL nativo C).
   * `Podmanfile` multi-stage build optimizado en Fedora Rawhide con usuario no root.
-  * *Entregable:* Imagen de Podman lista para producción ejecutando en entornos rootless.
+  * *Entregable:* Imagen de Podman lista para producción ejecutando en entornos estándar.
 
 * **F6-03 (L) — Batería de Pruebas "Guardián Cero JS", Cobertura y Carga:**
   * Ejecución de `cargo-llvm-cov` para validar cobertura $\ge 85\%$ en módulos de dominio.
