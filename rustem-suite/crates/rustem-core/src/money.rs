@@ -282,6 +282,29 @@ mod tests {
         assert_eq!(m.amount(), 0);
     }
 
+    #[test]
+    fn money_checked_add_large_amounts() {
+        let m1 = Money::new(50000000, Currency::Ves).unwrap();
+        let m2 = Money::new(50000000, Currency::Ves).unwrap();
+        let total = m1.checked_add(m2).unwrap();
+        assert_eq!(total.amount(), 100000000);
+    }
+
+    #[test]
+    fn money_checked_sub_large_amounts() {
+        let m1 = Money::new(100000000, Currency::Ves).unwrap();
+        let m2 = Money::new(50000000, Currency::Ves).unwrap();
+        let diff = m1.checked_sub(m2).unwrap();
+        assert_eq!(diff.amount(), 50000000);
+    }
+
+    #[test]
+    fn money_checked_mul_large_amount() {
+        let m = Money::new(1000000, Currency::Ves).unwrap();
+        let total = m.checked_mul(1000).unwrap();
+        assert_eq!(total.amount(), 1000000000);
+    }
+
     proptest! {
         #[test]
         fn prop_add_is_commutative(
