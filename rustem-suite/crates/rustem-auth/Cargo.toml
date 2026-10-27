@@ -1,0 +1,29 @@
+[package]
+name = "rustem-auth"
+description = "Autenticación, Argon2id, sesiones y tokens seguros (256 bits)"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+chrono = { workspace = true }
+rust_decimal = { workspace = true }
+getrandom = { workspace = true }
+sha2 = { workspace = true }
+zeroize = { workspace = true }
+secrecy = { workspace = true }
+argon2 = { workspace = true }
+tracing = { workspace = true }
+uuid = { workspace = true }
+hex = "0.4"
+time = { version = "0.3", features = ["formatting", "parsing", "serde"] }
+rand = "0.8"
+rustem-core = { path = "../rustem-core" }
+rustem-db = { path = "../rustem-db" }
+
+[dev-dependencies]
+anyhow = { workspace = true }
+tokio = { workspace = true }

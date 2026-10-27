@@ -1,0 +1,20 @@
+# Rust/Cargo build artifacts
+/target/
+/**/target/
+
+# Cargo.lock is optional for binaries, but keep it for reproducibility
+# /Cargo.lock
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

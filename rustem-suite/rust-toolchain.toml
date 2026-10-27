@@ -1,0 +1,7 @@
+[toolchain]
+channel = "stable"
+profile = "default"
+
+[component]
+rustfmt = true
+clippy = true

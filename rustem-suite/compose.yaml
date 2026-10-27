@@ -1,0 +1,57 @@
+# ===========================================================================
+# RUSTEM SUITE — Orquestación con Podman Compose (Fedora Rawhide)
+# ===========================================================================
+# Levanta SurrealDB (motor de base de datos) y la aplicación Rustem Suite.
+# Uso: podman-compose up -d
+# ===========================================================================
+
+version: "3.8"
+
+services:
+  # ---------------------------------------------------------------
+  # SurrealDB 2.x Standalone (motor transaccional ACID, SCHEMAFULL)
+  # ---------------------------------------------------------------
+  surrealdb:
+    image: surrealdb/surrealdb:2.2.0
+    container_name: rustem-surrealdb
+    command: start --user root --pass root --log info 0.0.0.0:8000
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data/surrealdb:/database
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks:
+      - rustem-net
+
+  # ---------------------------------------------------------------
+  # Rustem Suite (servidor Axum + Leptos SSR puro)
+  # ---------------------------------------------------------------
+  rustem-web:
+    build:
+      context: ..
+      dockerfile: Podmanfile
+    container_name: rustem-web
+    depends_on:
+      surrealdb:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: ws://surrealdb:8000/rpc
+      DATABASE_USER: root
+      DATABASE_PASS: root
+      NAMESPACE: rustem
+      DATABASE_NAME: suite
+      RUST_LOG: info
+      RUSTEM_BASE_URL: http://localhost:8080
+    ports:
+      - "8080:8080"
+    networks:
+      - rustem-net
+    restart: unless-stopped
+
+networks:
+  rustem-net:
+    driver: bridge

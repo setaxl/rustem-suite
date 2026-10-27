@@ -1,0 +1,21 @@
+[package]
+name = "rustem-core"
+description = "Tipos de dominio compartidos, VEN-NIF Money, RIF y errores del dominio"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+chrono = { workspace = true }
+rust_decimal = { workspace = true }
+uuid = { workspace = true }
+zeroize = { workspace = true }
+secrecy = { workspace = true }
+sha2 = { workspace = true }
+validator = { workspace = true }
+
+[dev-dependencies]
+proptest = { workspace = true }

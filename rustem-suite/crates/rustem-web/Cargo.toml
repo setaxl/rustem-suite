@@ -1,0 +1,41 @@
+[package]
+name = "rustem-web"
+description = "Servidor Axum: rutas, handlers, middlewares y estáticos"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "rustem-web"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+chrono = { workspace = true }
+rust_decimal = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { version = "0.3", default-features = false, features = ["fmt", "env-filter"] }
+tokio = { workspace = true }
+axum = { workspace = true }
+async-trait = { workspace = true }
+tower = { workspace = true }
+tower-http = { workspace = true }
+http = { workspace = true }
+hyper = { workspace = true }
+uuid = { workspace = true }
+secrecy = { workspace = true }
+rust-embed = { workspace = true }
+rustem-core = { path = "../rustem-core" }
+rustem-db = { path = "../rustem-db" }
+rustem-auth = { path = "../rustem-auth" }
+rustem-admin = { path = "../rustem-admin" }
+rustem-frontend = { path = "../rustem-frontend" }
+rustem-inventory = { path = "../rustem-inventory" }
+rustem-sales = { path = "../rustem-sales" }
+
+[dev-dependencies]
+anyhow = { workspace = true }
+tokio = { workspace = true }
+http-body-util = { version = "0.1", features = ["full"] }
