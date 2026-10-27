@@ -132,4 +132,40 @@ mod tests {
         let hash = hasher.hash(&password).unwrap();
         assert!(hasher.verify(&password, &hash).unwrap());
     }
+
+    #[test]
+    fn hash_returns_non_empty() {
+        let hasher = PasswordHasher::new();
+        let password = SecretString::new("test".to_string());
+        let hash = hasher.hash(&password).unwrap();
+        assert!(!hash.is_empty());
+        assert!(hash.len() > 20); // Argon2 hash is long
+    }
+
+    #[test]
+    fn verify_empty_password() {
+        let hasher = PasswordHasher::new();
+        let password = SecretString::new("".to_string());
+        let hash = hasher.hash(&password).unwrap();
+        assert!(hasher.verify(&password, &hash).unwrap());
+    }
+
+    #[test]
+    fn hash_produces_different_outputs() {
+        let hasher = PasswordHasher::new();
+        let password = SecretString::new("same_password".to_string());
+        let hash1 = hasher.hash(&password).unwrap();
+        let hash2 = hasher.hash(&password).unwrap();
+        // Los hashes deben ser diferentes debido a la sal aleatoria
+        assert_ne!(hash1, hash2);
+    }
+
+    #[test]
+    fn hash_contains_algorithm_identifier() {
+        let hasher = PasswordHasher::new();
+        let password = SecretString::new("test".to_string());
+        let hash = hasher.hash(&password).unwrap();
+        // Argon2 hash debe contener el identificador del algoritmo
+        assert!(hash.contains("argon2"));
+    }
 }

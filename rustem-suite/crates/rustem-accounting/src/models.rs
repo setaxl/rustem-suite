@@ -128,4 +128,49 @@ mod tests {
         };
         assert!(!entry.is_balanced());
     }
+
+    #[test]
+    fn account_new_with_different_types() {
+        let a = Account::new("110101", "Caja", AccountType::Activo, 1);
+        assert_eq!(a.code, "110101");
+        assert_eq!(a.name, "Caja");
+        assert_eq!(a.account_type, AccountType::Activo);
+        assert_eq!(a.level, 1);
+        assert!(a.is_operational);
+
+        let b = Account::new("210101", "Banco", AccountType::Pasivo, 2);
+        assert_eq!(b.code, "210101");
+        assert_eq!(b.name, "Banco");
+        assert_eq!(b.account_type, AccountType::Pasivo);
+        assert_eq!(b.level, 2);
+
+        let c = Account::new("310101", "Capital", AccountType::Patrimonio, 1);
+        assert_eq!(c.account_type, AccountType::Patrimonio);
+
+        let d = Account::new("410101", "Ventas", AccountType::Ingresos, 1);
+        assert_eq!(d.account_type, AccountType::Ingresos);
+
+        let e = Account::new("510101", "Costo", AccountType::Costos, 1);
+        assert_eq!(e.account_type, AccountType::Costos);
+
+        let f = Account::new("610101", "Gasto", AccountType::Gastos, 1);
+        assert_eq!(f.account_type, AccountType::Gastos);
+
+        let g = Account::new("710101", "Orden", AccountType::Orden, 1);
+        assert_eq!(g.account_type, AccountType::Orden);
+    }
+
+    #[test]
+    fn account_with_parent_code() {
+        let mut a = Account::new("110101", "Caja", AccountType::Activo, 2);
+        a.parent_code = Some("1101".to_string());
+        assert_eq!(a.parent_code, Some("1101".to_string()));
+    }
+
+    #[test]
+    fn account_not_operational() {
+        let mut a = Account::new("110101", "Caja", AccountType::Activo, 1);
+        a.is_operational = false;
+        assert!(!a.is_operational);
+    }
 }
