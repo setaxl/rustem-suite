@@ -319,4 +319,13 @@ mod tests {
         let digits = rif.digits();
         assert_eq!(digits, [1, 2, 3, 4, 5, 6, 7, 8]);
     }
+
+    #[test]
+    fn rif_compute_check_digit_different_prefixes() {
+        let digits_v = [1, 2, 3, 4, 5, 6, 7, 8];
+        let digits_j = [1, 2, 3, 4, 5, 6, 7, 9];
+        let v_check = Rif::compute_check_digit('V', &digits_v);
+        let j_check = Rif::compute_check_digit('J', &digits_j);
+        assert_ne!(v_check, j_check);
+    }
 }
