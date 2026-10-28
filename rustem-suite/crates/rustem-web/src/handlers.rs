@@ -3930,4 +3930,36 @@ mod tests {
         .await;
         assert!(html.0.contains("Sin base de datos disponible"));
     }
+
+    #[tokio::test]
+    async fn login_post_sin_db_returns_503() {
+        use axum::extract::Form;
+        use http::HeaderMap;
+
+        let state = crate::state::AppState::for_tests();
+        let headers = HeaderMap::new();
+        let form = rustem_auth::handlers::LoginRequest {
+            email: "test@test.com".to_string(),
+            password: "password123".to_string(),
+        };
+        let result = login_post(State(state), headers, Form(form)).await;
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), StatusCode::SERVICE_UNAVAILABLE);
+    }
+
+    #[tokio::test]
+    async fn register_post_sin_db_redirects_to_login() {
+        use axum::extract::Form;
+
+        let state = crate::state::AppState::for_tests();
+        let form = rustem_auth::handlers::RegisterRequest {
+            email: "test@test.com".to_string(),
+            password: "password123".to_string(),
+            full_name: "Test User".to_string(),
+            company_name: "Test Co".to_string(),
+            company_rif: "V-12345678-9".to_string(),
+        };
+        let result = register_post(State(state), Form(form)).await;
+        assert!(result.is_ok());
+    }
 }
