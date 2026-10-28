@@ -275,11 +275,11 @@ mod tests {
 
     #[async_trait::async_trait]
     impl DbConnection for MockDbConnection {
-        async fn query(&self, _sql: &str, _params: serde_json::Value) -> anyhow::Result<surrealdb::Response> {
+        async fn query(&self, _sql: &str, _params: serde_json::Value) -> anyhow::Result<rustem_db::DbResponse> {
             Err(anyhow!("mock query error"))
         }
 
-        async fn execute(&self, _sql: &str, _params: serde_json::Value) -> anyhow::Result<surrealdb::Response> {
+        async fn execute(&self, _sql: &str, _params: serde_json::Value) -> anyhow::Result<rustem_db::DbResponse> {
             Err(anyhow!("mock execute error"))
         }
 

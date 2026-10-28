@@ -15,10 +15,10 @@
 use async_trait::async_trait;
 use serde_json::Value;
 use std::sync::Arc;
-use surrealdb::Response;
+
 use tracing::{debug, info};
 
-use crate::connection::DbConnection;
+use crate::connection::{DbConnection, DbResponse};
 
 /// Convierte un vector de pares (nombre, valor) a un objeto JSON para parámetros de SurrealDB.
 pub fn params_to_value(params: Vec<(String, Value)>) -> Value {
@@ -92,7 +92,7 @@ pub trait SurrealStore {
         &self,
         sql: &str,
         extra_params: Vec<(String, Value)>,
-    ) -> anyhow::Result<Response>;
+    ) -> anyhow::Result<DbResponse>;
 
     /// Crea un registro asegurando que incluya `tenant_id` y registra auditoría.
     async fn create_with_tenant(&self, table: &str, data: Value) -> anyhow::Result<Option<Value>>;
@@ -129,7 +129,7 @@ pub trait SurrealStore {
         &self,
         sql: &str,
         params: Vec<(String, Value)>,
-    ) -> anyhow::Result<Response>;
+    ) -> anyhow::Result<DbResponse>;
 
     /// Crea una arista de grafo RELATE entre dos registros para trazabilidad.
     /// Ejemplo: warehouse->HAS_STOCK->product.
@@ -159,10 +159,10 @@ pub trait SurrealStore {
         &self,
         start_date: Option<&str>,
         end_date: Option<&str>,
-    ) -> anyhow::Result<Response>;
+    ) -> anyhow::Result<DbResponse>;
 
     /// Consulta el plan de cuentas por tenant.
-    async fn query_chart_of_accounts_by_tenant(&self) -> anyhow::Result<Response>;
+    async fn query_chart_of_accounts_by_tenant(&self) -> anyhow::Result<DbResponse>;
 }
 
 /// Implementación concreta de [`SurrealStore`] sobre SurrealDB.
@@ -192,7 +192,7 @@ impl SurrealStore for SurrealStoreImpl {
         &self,
         sql: &str,
         extra_params: Vec<(String, Value)>,
-    ) -> anyhow::Result<Response> {
+    ) -> anyhow::Result<DbResponse> {
         let mut params: Vec<(String, Value)> = vec![(
             "$tenant_id".to_string(),
             Value::String(self.ctx.tenant_id.clone()),
@@ -426,7 +426,7 @@ impl SurrealStore for SurrealStoreImpl {
         &self,
         sql: &str,
         params: Vec<(String, Value)>,
-    ) -> anyhow::Result<Response> {
+    ) -> anyhow::Result<DbResponse> {
         debug!(
             "Ejecutando transacción ACID con tenant_id={}: {}",
             self.ctx.tenant_id, sql
@@ -564,7 +564,7 @@ impl SurrealStore for SurrealStoreImpl {
         &self,
         start_date: Option<&str>,
         end_date: Option<&str>,
-    ) -> anyhow::Result<Response> {
+    ) -> anyhow::Result<DbResponse> {
         let mut sql = String::from("SELECT * FROM journal_entries WHERE tenant_id = $tenant_id");
         let mut params: Vec<(String, Value)> = vec![(
             "$tenant_id".to_string(),
@@ -589,7 +589,7 @@ impl SurrealStore for SurrealStoreImpl {
         Ok(resp)
     }
 
-    async fn query_chart_of_accounts_by_tenant(&self) -> anyhow::Result<Response> {
+    async fn query_chart_of_accounts_by_tenant(&self) -> anyhow::Result<DbResponse> {
         let sql = "SELECT * FROM chart_of_accounts WHERE tenant_id = $tenant_id ORDER BY code";
         let params: Vec<(String, Value)> = vec![(
             "$tenant_id".to_string(),

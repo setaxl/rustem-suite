@@ -14,7 +14,7 @@ pub mod connection;
 pub mod migration;
 pub mod store;
 
-pub use connection::{DbConnection, SurrealConnection};
+pub use connection::{DbConnection, DbResponse, SurrealConnection};
 pub use migration::{MigrationResult, MigrationRunner};
 pub use store::{params_to_value, SurrealStore, TenantContext};
 

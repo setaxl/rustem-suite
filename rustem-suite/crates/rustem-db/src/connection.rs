@@ -15,25 +15,61 @@ use tracing::info;
 
 use crate::migration::MigrationRunner;
 
+/// Respuesta de consulta que puede ser una conexión real o un mock.
+/// Permite crear respuestas simuladas en pruebas sin necesidad de SurrealDB real.
+#[derive(Debug)]
+pub enum DbResponse {
+    /// Respuesta real de SurrealDB.
+    Real(surrealdb::Response),
+    /// Respuesta simulada para pruebas.
+    Mock(Vec<serde_json::Value>),
+}
+
+impl DbResponse {
+    /// Toma y devuelve registros del resultado en el índice dado.
+    /// Usa Vec<surrealdb::Value> como intermediario para permitir
+    /// deserialización a cualquier tipo T: DeserializeOwned.
+    pub fn take<T>(&mut self, index: usize) -> anyhow::Result<T>
+    where
+        T: serde::de::DeserializeOwned,
+    {
+        match self {
+            DbResponse::Real(resp) => {
+                let values: Vec<surrealdb::Value> = resp.take(index)
+                    .map_err(|e| anyhow::anyhow!("surrealdb error: {e}"))?;
+                let value = values.into_iter().next()
+                    .unwrap_or_default();
+                let sjv: serde_json::Value = serde_json::to_value(&value)
+                    .map_err(|e| anyhow::anyhow!("failed to convert: {e}"))?;
+                serde_json::from_value::<T>(sjv)
+                    .map_err(|e| anyhow::anyhow!("failed to deserialize: {e}"))
+            }
+            DbResponse::Mock(values) => {
+                let value = values.get(index)
+                    .ok_or_else(|| anyhow::anyhow!("no result at index {}", index))?;
+                serde_json::from_value::<T>(value.clone())
+                    .map_err(|e| anyhow::anyhow!("failed to deserialize: {e}"))
+            }
+        }
+    }
+}
+
 /// Trait de abstracción sobre la conexión a SurrealDB.
 /// Permite usar una conexión real o un mock en pruebas.
 #[async_trait::async_trait]
 pub trait DbConnection: Send + Sync {
     /// Ejecuta una consulta SurQL parametrizada.
-    /// `params` debe ser un objeto JSON o arreglo JSON con los parámetros vinculados.
-    async fn query(&self, sql: &str, params: serde_json::Value) -> anyhow::Result<surrealdb::Response>;
+    async fn query(&self, sql: &str, params: serde_json::Value) -> anyhow::Result<DbResponse>;
 
     /// Ejecuta una consulta sin retorno tipificado.
-    async fn execute(&self, sql: &str, params: serde_json::Value) -> anyhow::Result<surrealdb::Response>;
+    async fn execute(&self, sql: &str, params: serde_json::Value) -> anyhow::Result<DbResponse>;
 
     /// Aplica migraciones pendientes.
     async fn apply_migrations(&self) -> anyhow::Result<crate::migration::MigrationResult>;
 
     /// Clona la conexión como trait object.
     fn clone_box(&self) -> Arc<dyn DbConnection>;
-}
-
-/// Wrapper sobre la conexión a SurrealDB.
+}/// Wrapper sobre la conexión a SurrealDB.
 /// Es el único tipo que tiene acceso directo al cliente de SurrealDB.
 /// Todos los demás crates acceden a través de [`crate::store::SurrealStore`].
 #[derive(Clone, Debug)]
@@ -86,12 +122,12 @@ impl SurrealConnection {
     ///
     /// # Errores
     /// Devuelve `anyhow::Error` si la consulta falla.
-    pub async fn query<P>(&self, sql: &str, params: P) -> anyhow::Result<surrealdb::Response>
+    pub async fn query<P>(&self, sql: &str, params: P) -> anyhow::Result<DbResponse>
     where
         P: serde::Serialize + 'static,
     {
         let resp = self.client.query(sql).bind(params).await?;
-        Ok(resp)
+        Ok(DbResponse::Real(resp))
     }
 
     /// Ejecuta una consulta sin retorno de datos tipificado.
@@ -99,9 +135,9 @@ impl SurrealConnection {
         &self,
         sql: &str,
         params: impl serde::Serialize + 'static,
-    ) -> anyhow::Result<surrealdb::Response> {
+    ) -> anyhow::Result<DbResponse> {
         let resp = self.client.query(sql).bind(params).await?;
-        Ok(resp)
+        Ok(DbResponse::Real(resp))
     }
 
     /// Aplica todas las migraciones `.surql` pendientes de forma idempotente.
@@ -112,14 +148,14 @@ impl SurrealConnection {
 
 #[async_trait::async_trait]
 impl DbConnection for SurrealConnection {
-    async fn query(&self, sql: &str, params: serde_json::Value) -> anyhow::Result<surrealdb::Response> {
+    async fn query(&self, sql: &str, params: serde_json::Value) -> anyhow::Result<DbResponse> {
         let resp = self.client.query(sql).bind(params).await?;
-        Ok(resp)
+        Ok(DbResponse::Real(resp))
     }
 
-    async fn execute(&self, sql: &str, params: serde_json::Value) -> anyhow::Result<surrealdb::Response> {
+    async fn execute(&self, sql: &str, params: serde_json::Value) -> anyhow::Result<DbResponse> {
         let resp = self.client.query(sql).bind(params).await?;
-        Ok(resp)
+        Ok(DbResponse::Real(resp))
     }
 
     async fn apply_migrations(&self) -> anyhow::Result<crate::migration::MigrationResult> {
