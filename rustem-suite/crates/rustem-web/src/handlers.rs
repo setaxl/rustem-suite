@@ -3581,4 +3581,93 @@ mod tests {
         let html = kardex(State(state), ctx).await;
         assert!(html.0.contains("Sin base de datos disponible"));
     }
+
+    #[tokio::test]
+    async fn almacenes_crear_sin_db() {
+        let state = crate::state::AppState::for_tests();
+        let ctx = TenantCtx(rustem_db::store::TenantContext::new("company-test"));
+        let form = AlmacenForm {
+            name: "Test".to_string(),
+            address: None,
+            phone: None,
+            is_active: None,
+        };
+        let result = almacenes_crear(State(state), ctx, axum::Form(form)).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn almacenes_editar_sin_db() {
+        let state = crate::state::AppState::for_tests();
+        let ctx = TenantCtx(rustem_db::store::TenantContext::new("company-test"));
+        let html = almacenes_editar(State(state), axum::extract::Path("id-1".to_string()), ctx).await;
+        assert!(html.0.contains("Sin base de datos disponible"));
+    }
+
+    #[tokio::test]
+    async fn productos_crear_sin_db() {
+        let state = crate::state::AppState::for_tests();
+        let ctx = TenantCtx(rustem_db::store::TenantContext::new("company-test"));
+        let form = ProductoForm {
+            sku: "SKU-1".to_string(),
+            name: "Test".to_string(),
+            description: None,
+            unit: None,
+            category: None,
+            vat_rate: None,
+            min_stock: None,
+        };
+        let result = productos_crear(State(state), ctx, axum::Form(form)).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn clientes_crear_sin_db() {
+        let state = crate::state::AppState::for_tests();
+        let ctx = TenantCtx(rustem_db::store::TenantContext::new("company-test"));
+        let form = CustomerForm {
+            rif: "V-12345678-9".to_string(),
+            name: "Test".to_string(),
+            vat_condition: "ordinario".to_string(),
+            address: None,
+            phone: None,
+            email: None,
+        };
+        let result = clientes_crear(State(state), ctx, axum::Form(form)).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn cuentas_crear_sin_db() {
+        let state = crate::state::AppState::for_tests();
+        let ctx = TenantCtx(rustem_db::store::TenantContext::new("company-test"));
+        let form = AccountForm {
+            code: "1000".to_string(),
+            name: "Test".to_string(),
+            account_type: "activo".to_string(),
+            level: None,
+            parent_code: None,
+            is_operational: None,
+        };
+        let result = cuentas_crear(State(state), ctx, axum::Form(form)).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn facturas_crear_sin_db() {
+        let state = crate::state::AppState::for_tests();
+        let ctx = TenantCtx(rustem_db::store::TenantContext::new("company-test"));
+        let form = InvoiceForm {
+            customer_id: "customer-1".to_string(),
+            series: "F".to_string(),
+            number: 1,
+            control_number: "CTRL-1".to_string(),
+            currency: "VES".to_string(),
+            iva_rate: "16".to_string(),
+            igtf_rate_percent: 0,
+            subtotal_cents: "10000".to_string(),
+        };
+        let result = facturas_crear(State(state), ctx, axum::Form(form)).await;
+        assert!(result.is_ok());
+    }
 }
