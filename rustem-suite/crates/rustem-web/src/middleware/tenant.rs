@@ -264,4 +264,48 @@ mod tests {
     fn parse_session_cookie_empty() {
         assert_eq!(parse_session_cookie(""), None);
     }
+
+    use std::sync::Arc;
+    use anyhow::anyhow;
+    use rustem_db::MigrationResult;
+
+    /// Mock de DbConnection para pruebas sin SurrealDB real.
+    /// Siempre devuelve error en query, probando los paths de manejo de error.
+    struct MockDbConnection;
+
+    #[async_trait::async_trait]
+    impl DbConnection for MockDbConnection {
+        async fn query(&self, _sql: &str, _params: serde_json::Value) -> anyhow::Result<surrealdb::Response> {
+            Err(anyhow!("mock query error"))
+        }
+
+        async fn execute(&self, _sql: &str, _params: serde_json::Value) -> anyhow::Result<surrealdb::Response> {
+            Err(anyhow!("mock execute error"))
+        }
+
+        async fn apply_migrations(&self) -> anyhow::Result<MigrationResult> {
+            Ok(MigrationResult { applied: 0, skipped: 0 })
+        }
+
+        fn clone_box(&self) -> Arc<dyn DbConnection> {
+            Arc::new(Self)
+        }
+    }
+
+    #[tokio::test]
+    async fn resolve_session_error() {
+        let mock = Arc::new(MockDbConnection);
+        let result = resolve_session(mock.as_ref(), "valid-token").await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn resolve_user_roles_and_permissions_error() {
+        let mock = Arc::new(MockDbConnection);
+        let (roles, permissions) = resolve_user_roles_and_permissions(mock.as_ref(), "user-1")
+            .await
+            .unwrap_or_default();
+        assert!(roles.is_empty());
+        assert!(permissions.is_empty());
+    }
 }
