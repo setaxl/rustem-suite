@@ -4020,4 +4020,12 @@ mod tests {
         let result = asientos_crear_desde_movimiento(State(state), ctx, axum::Form(form)).await;
         assert!(result.is_ok());
     }
+
+    #[tokio::test]
+    async fn cuentas_arbol_view_sin_db() {
+        let state = crate::state::AppState::for_tests();
+        let ctx = TenantCtx(rustem_db::store::TenantContext::new("company-test"));
+        let html = cuentas_arbol_view(State(state), ctx).await;
+        assert!(html.0.contains("Sin base de datos disponible"));
+    }
 }
