@@ -308,4 +308,88 @@ mod tests {
         assert!(roles.is_empty());
         assert!(permissions.is_empty());
     }
+
+    /// Mock que retorna datos de sesión válidos.
+    struct MockDbConnectionWithSession;
+
+    #[async_trait::async_trait]
+    impl DbConnection for MockDbConnectionWithSession {
+        async fn query(&self, _sql: &str, _params: serde_json::Value) -> anyhow::Result<rustem_db::DbResponse> {
+            let session_data = serde_json::json!([
+                {
+                    "user_id": "user-123",
+                    "company_id": "company-456"
+                }
+            ]);
+            Ok(rustem_db::DbResponse::Mock(vec![session_data]))
+        }
+
+        async fn execute(&self, _sql: &str, _params: serde_json::Value) -> anyhow::Result<rustem_db::DbResponse> {
+            Ok(rustem_db::DbResponse::Mock(vec![]))
+        }
+
+        async fn apply_migrations(&self) -> anyhow::Result<MigrationResult> {
+            Ok(MigrationResult { applied: 0, skipped: 0 })
+        }
+
+        fn clone_box(&self) -> Arc<dyn DbConnection> {
+            Arc::new(Self)
+        }
+    }
+
+    /// Mock que retorna roles y permisos para el usuario.
+    struct MockDbConnectionWithRoles;
+
+    #[async_trait::async_trait]
+    impl DbConnection for MockDbConnectionWithRoles {
+        async fn query(&self, _sql: &str, _params: serde_json::Value) -> anyhow::Result<rustem_db::DbResponse> {
+            let roles_data = serde_json::json!([
+                { "role_name": "Owner" }
+            ]);
+            let perms_data = serde_json::json!([
+                { "resource": "sales", "action": "read" },
+                { "resource": "sales", "action": "write" }
+            ]);
+            if _sql.contains("CAN_ACCESS") || _sql.contains("permission.resource") {
+                Ok(rustem_db::DbResponse::Mock(vec![perms_data]))
+            } else {
+                Ok(rustem_db::DbResponse::Mock(vec![roles_data]))
+            }
+        }
+
+        async fn execute(&self, _sql: &str, _params: serde_json::Value) -> anyhow::Result<rustem_db::DbResponse> {
+            Ok(rustem_db::DbResponse::Mock(vec![]))
+        }
+
+        async fn apply_migrations(&self) -> anyhow::Result<MigrationResult> {
+            Ok(MigrationResult { applied: 0, skipped: 0 })
+        }
+
+        fn clone_box(&self) -> Arc<dyn DbConnection> {
+            Arc::new(Self)
+        }
+    }
+
+    #[tokio::test]
+    async fn resolve_session_success() {
+        let mock = Arc::new(MockDbConnectionWithSession);
+        let result = resolve_session(mock.as_ref(), "valid-token").await;
+        assert!(result.is_ok());
+        let session = result.unwrap().unwrap();
+        assert_eq!(session.user_id, "user-123");
+        assert_eq!(session.company_id, Some("company-456".to_string()));
+    }
+
+    #[tokio::test]
+    async fn resolve_user_roles_and_permissions_success() {
+        let mock = Arc::new(MockDbConnectionWithRoles);
+        let (roles, permissions) = resolve_user_roles_and_permissions(mock.as_ref(), "user-123")
+            .await
+            .unwrap_or_default();
+        assert!(!roles.is_empty());
+        assert!(!permissions.is_empty());
+        assert!(roles.contains(&"Owner".to_string()));
+        assert!(permissions.contains(&"sales:read".to_string()));
+        assert!(permissions.contains(&"sales:write".to_string()));
+    }
 }
