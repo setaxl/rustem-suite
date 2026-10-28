@@ -3448,4 +3448,81 @@ mod tests {
             .unwrap();
         let _redirect = logout_post(State(state), req).await;
     }
+
+    #[tokio::test]
+    async fn register_get_returns_html() {
+        let html = register_get().await;
+        assert!(html.0.contains("Registro"));
+        assert!(!html.0.contains("<script"));
+    }
+
+    #[tokio::test]
+    async fn almacenes_nuevo_returns_html() {
+        let html = almacenes_nuevo().await;
+        assert!(html.0.contains("Almacén"));
+        assert!(!html.0.contains("<script"));
+    }
+
+    #[tokio::test]
+    async fn productos_nuevo_returns_html() {
+        let html = productos_nuevo().await;
+        assert!(html.0.contains("Producto"));
+        assert!(!html.0.contains("<script"));
+    }
+
+    #[tokio::test]
+    async fn clientes_nuevo_returns_html() {
+        let html = clientes_nuevo().await;
+        assert!(html.0.contains("Cliente"));
+        assert!(!html.0.contains("<script"));
+    }
+
+    #[tokio::test]
+    async fn cuentas_nuevo_returns_html() {
+        let html = cuentas_nuevo().await;
+        assert!(html.0.contains("Cuenta"));
+        assert!(!html.0.contains("<script"));
+    }
+
+    #[tokio::test]
+    async fn asientos_nuevo_returns_html() {
+        let html = asientos_nuevo().await;
+        assert!(html.0.contains("Asiento"));
+        assert!(!html.0.contains("<script"));
+    }
+
+    #[tokio::test]
+    async fn cotizaciones_nuevo_returns_html() {
+        let html = cotizaciones_nuevo().await;
+        assert!(html.0.contains("Cotización"));
+        assert!(!html.0.contains("<script"));
+    }
+
+    #[tokio::test]
+    async fn inventario_returns_html() {
+        let html = inventario().await;
+        assert!(html.0.contains("Inventario"));
+        assert!(!html.0.contains("<script"));
+    }
+
+    #[tokio::test]
+    async fn ventas_returns_html() {
+        let html = ventas().await;
+        assert!(html.0.contains("Ventas"));
+        assert!(!html.0.contains("<script"));
+    }
+
+    #[tokio::test]
+    async fn contabilidad_returns_html() {
+        let html = contabilidad().await;
+        assert!(html.0.contains("Contabilidad"));
+        assert!(!html.0.contains("<script"));
+    }
+
+    #[tokio::test]
+    async fn admin_returns_html() {
+        let html = admin().await;
+        assert!(html.0.contains("Admin"));
+        assert!(!html.0.contains("<script"));
+    }
 }
