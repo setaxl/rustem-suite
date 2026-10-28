@@ -169,10 +169,74 @@ impl DbConnection for SurrealConnection {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+    use std::sync::Arc;
+
     #[test]
     fn connection_struct_debug() {
         // Prueba de unidad: SurrealConnection puede formatearse para depuración.
         // No se conecta a SurrealDB real en pruebas unitarias.
         let _ = ();
+    }
+
+    #[test]
+    fn db_response_take_mock_data() {
+        // Prueba que DbResponse::take extrae datos de Mock correctamente.
+        let mock_data = serde_json::json!({"id": "1", "name": "Test"});
+        let mut response = DbResponse::Mock(vec![mock_data]);
+        let result: serde_json::Value = response.take(0).unwrap();
+        assert_eq!(result.get("id").and_then(|v| v.as_str()), Some("1"));
+        assert_eq!(result.get("name").and_then(|v| v.as_str()), Some("Test"));
+    }
+
+    #[test]
+    fn db_response_take_index_out_of_bounds() {
+        // Prueba que DbResponse::take retorna error cuando el índice está fuera de rango.
+        let mock_data = serde_json::json!([{"id": "1"}]);
+        let mut response = DbResponse::Mock(vec![mock_data]);
+        let result: Result<serde_json::Value, _> = response.take(5);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn db_response_take_empty_mock() {
+        // Prueba que DbResponse::take retorna error cuando no hay datos.
+        let mut response = DbResponse::Mock(vec![]);
+        let result: Result<serde_json::Value, _> = response.take(0);
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn migration_runner_apply_all_with_mock() {
+        use crate::{MigrationResult, MigrationRunner};
+        use crate::store::TenantContext;
+
+        struct MockMigrationConnection;
+
+        #[async_trait::async_trait]
+        impl DbConnection for MockMigrationConnection {
+            async fn query(&self, _sql: &str, _params: serde_json::Value) -> anyhow::Result<DbResponse> {
+                Ok(DbResponse::Mock(vec![]))
+            }
+
+            async fn execute(&self, _sql: &str, _params: serde_json::Value) -> anyhow::Result<DbResponse> {
+                Ok(DbResponse::Mock(vec![]))
+            }
+
+            async fn apply_migrations(&self) -> anyhow::Result<MigrationResult> {
+                Ok(MigrationResult { applied: 0, skipped: 0 })
+            }
+
+            fn clone_box(&self) -> Arc<dyn DbConnection> {
+                Arc::new(Self)
+            }
+        }
+
+        let mock = Arc::new(MockMigrationConnection);
+        let result = mock.apply_migrations().await;
+        assert!(result.is_ok());
+        let migration_result = result.unwrap();
+        assert_eq!(migration_result.applied, 0);
+        assert_eq!(migration_result.skipped, 0);
     }
 }
