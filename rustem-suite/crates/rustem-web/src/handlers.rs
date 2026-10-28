@@ -3962,4 +3962,30 @@ mod tests {
         let result = register_post(State(state), Form(form)).await;
         assert!(result.is_ok());
     }
+
+    #[tokio::test]
+    async fn asientos_crear_sin_db() {
+        use serde_json::json;
+        use axum::extract::Form;
+
+        let state = crate::state::AppState::for_tests();
+        let ctx = TenantCtx(rustem_db::store::TenantContext::new("company-test"));
+        let form = AsientoForm {
+            date: "2024-01-01".to_string(),
+            description: "Test".to_string(),
+            lineas: vec![],
+        };
+        let result = asientos_crear(State(state), ctx, axum::Form(form)).await;
+        assert!(result.is_ok());
+        let redirect = result.unwrap();
+        // Con db=None, redirige a /contabilidad/asientos
+    }
+
+    #[tokio::test]
+    async fn facturas_nuevo_sin_db() {
+        let state = crate::state::AppState::for_tests();
+        let ctx = TenantCtx(rustem_db::store::TenantContext::new("company-test"));
+        let html = facturas_nuevo(State(state), ctx).await;
+        assert!(html.0.contains("Sin base de datos disponible"));
+    }
 }
