@@ -162,7 +162,7 @@ mod tests {
         assert_eq!(c_no.vat_condition_str(), "no_sujeto");
     }
 
-    #[test]
+        #[test]
     fn document_state_all_variants() {
         let quote_borrador = Quote {
             id: "q1".to_string(),
@@ -208,5 +208,38 @@ mod tests {
             total_cents: 5000,
         };
         assert_eq!(order_pagado.state, DocumentState::Pagado);
+    }
+
+    #[test]
+    fn quote_field_accessors() {
+        let quote = Quote {
+            id: "q-test".to_string(),
+            customer_id: "c1".to_string(),
+            state: DocumentState::Emitido,
+            subtotal_cents: 10000,
+            iva_cents: 1600,
+            igtf_cents: 0,
+            total_cents: 11600,
+            currency: "VES".to_string(),
+        };
+        assert_eq!(quote.id, "q-test");
+        assert_eq!(quote.customer_id, "c1");
+        assert_eq!(quote.total_cents, 11600);
+        assert_eq!(quote.currency, "VES");
+    }
+
+    #[test]
+    fn order_field_accessors() {
+        let order = Order {
+            id: "o1".to_string(),
+            quote_id: Some("q1".to_string()),
+            customer_id: "c1".to_string(),
+            state: DocumentState::Pagado,
+            total_cents: 5000,
+        };
+        assert_eq!(order.id, "o1");
+        assert_eq!(order.customer_id, "c1");
+        assert_eq!(order.total_cents, 5000);
+        assert_eq!(order.quote_id, Some("q1".to_string()));
     }
 }
