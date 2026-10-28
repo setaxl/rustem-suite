@@ -328,4 +328,19 @@ mod tests {
         let j_check = Rif::compute_check_digit('J', &digits_j);
         assert_ne!(v_check, j_check);
     }
+
+    #[test]
+    fn rif_all_prefixes_valid() {
+        for prefix in ['V', 'J', 'G', 'E', 'P'] {
+            let rif_str = format!("{}-12345678-9", prefix);
+            assert!(Rif::new(&rif_str).is_ok(), "RIF {} should be valid", rif_str);
+        }
+    }
+
+    #[test]
+    fn rif_invalid_prefix() {
+        assert!(Rif::new("A-12345678-9").is_err());
+        assert!(Rif::new("Z-12345678-9").is_err());
+        assert!(Rif::new("Q-12345678-9").is_err());
+    }
 }
