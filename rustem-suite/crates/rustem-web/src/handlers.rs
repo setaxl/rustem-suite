@@ -24,7 +24,7 @@ use rustem_auth::handlers::{LoginRequest, RegisterRequest};
 use rustem_auth::password::PasswordHasher;
 use rustem_auth::session::{SessionManager, SessionToken};
 use rustem_core::{Rif, escape_html};
-use rustem_db::store::{SurrealStore, SurrealStoreImpl, TenantContext};
+use rustem_db::store::{params_to_value, SurrealStore, SurrealStoreImpl, TenantContext};
 use rustem_frontend::components::layout;
 use rustem_frontend::views;
 use rustem_inventory::{InventoryService, KardexEntry, MovementType, StockMovement};
@@ -218,7 +218,7 @@ pub async fn login_post(
     let params: Vec<(String, Value)> =
         vec![("$email".to_string(), Value::String(form.email.clone()))];
     let mut resp = conn
-        .query(sql, params)
+        .query(sql, params_to_value(params))
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     let users: Vec<Value> = resp
@@ -275,7 +275,7 @@ pub async fn login_post(
         let params: Vec<(String, Value)> =
             vec![("$user_id".to_string(), Value::String(user_id.clone()))];
         let mut resp = conn
-            .query(sql, params)
+            .query(sql, params_to_value(params))
             .await
             .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
         let rows: Vec<Value> = resp
@@ -319,7 +319,7 @@ pub async fn login_post(
     });
     let sql = "CREATE session CONTENT $data";
     let params: Vec<(String, Value)> = vec![("$data".to_string(), session_data.clone())];
-    conn.query(sql, params)
+    conn.query(sql, params_to_value(params))
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
@@ -340,7 +340,7 @@ pub async fn login_post(
     });
     conn.query(
         "CREATE audit_log CONTENT $data",
-        vec![("$data".to_string(), audit_data)],
+        params_to_value(vec![("$data".to_string(), audit_data)]),
     )
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -412,7 +412,7 @@ pub async fn register_post(
     });
     conn.query(
         "CREATE company CONTENT $data",
-        vec![("$data".to_string(), company_data.clone())],
+        params_to_value(vec![("$data".to_string(), company_data.clone())]),
     )
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -431,7 +431,7 @@ pub async fn register_post(
     });
     conn.query(
         "CREATE audit_log CONTENT $data",
-        vec![("$data".to_string(), audit_data)],
+        params_to_value(vec![("$data".to_string(), audit_data)]),
     )
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -450,7 +450,7 @@ pub async fn register_post(
     });
     conn.query(
         "CREATE user CONTENT $data",
-        vec![("$data".to_string(), user_data.clone())],
+        params_to_value(vec![("$data".to_string(), user_data.clone())]),
     )
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -469,7 +469,7 @@ pub async fn register_post(
     });
     conn.query(
         "CREATE audit_log CONTENT $data",
-        vec![("$data".to_string(), audit_data)],
+        params_to_value(vec![("$data".to_string(), audit_data)]),
     )
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -485,7 +485,7 @@ pub async fn register_post(
     });
     conn.query(
         "CREATE company_user CONTENT $data",
-        vec![("$data".to_string(), cu_data.clone())],
+        params_to_value(vec![("$data".to_string(), cu_data.clone())]),
     )
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
@@ -504,7 +504,7 @@ pub async fn register_post(
     });
     conn.query(
         "CREATE audit_log CONTENT $data",
-        vec![("$data".to_string(), audit_data)],
+        params_to_value(vec![("$data".to_string(), audit_data)]),
     )
     .await
     .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;

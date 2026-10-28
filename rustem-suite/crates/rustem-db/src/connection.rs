@@ -9,10 +9,29 @@
 //! Proporciona [`SurrealConnection`], el wrapper que expone operaciones
 //! parametrizadas para prevenir inyección SurQL.
 
+use std::sync::Arc;
 use surrealdb::{Surreal, engine::any::connect as surreal_connect};
 use tracing::info;
 
 use crate::migration::MigrationRunner;
+
+/// Trait de abstracción sobre la conexión a SurrealDB.
+/// Permite usar una conexión real o un mock en pruebas.
+#[async_trait::async_trait]
+pub trait DbConnection: Send + Sync {
+    /// Ejecuta una consulta SurQL parametrizada.
+    /// `params` debe ser un objeto JSON o arreglo JSON con los parámetros vinculados.
+    async fn query(&self, sql: &str, params: serde_json::Value) -> anyhow::Result<surrealdb::Response>;
+
+    /// Ejecuta una consulta sin retorno tipificado.
+    async fn execute(&self, sql: &str, params: serde_json::Value) -> anyhow::Result<surrealdb::Response>;
+
+    /// Aplica migraciones pendientes.
+    async fn apply_migrations(&self) -> anyhow::Result<crate::migration::MigrationResult>;
+
+    /// Clona la conexión como trait object.
+    fn clone_box(&self) -> Arc<dyn DbConnection>;
+}
 
 /// Wrapper sobre la conexión a SurrealDB.
 /// Es el único tipo que tiene acceso directo al cliente de SurrealDB.
@@ -88,6 +107,27 @@ impl SurrealConnection {
     /// Aplica todas las migraciones `.surql` pendientes de forma idempotente.
     pub async fn apply_migrations(&self) -> anyhow::Result<crate::migration::MigrationResult> {
         MigrationRunner::new().apply_all(self).await
+    }
+}
+
+#[async_trait::async_trait]
+impl DbConnection for SurrealConnection {
+    async fn query(&self, sql: &str, params: serde_json::Value) -> anyhow::Result<surrealdb::Response> {
+        let resp = self.client.query(sql).bind(params).await?;
+        Ok(resp)
+    }
+
+    async fn execute(&self, sql: &str, params: serde_json::Value) -> anyhow::Result<surrealdb::Response> {
+        let resp = self.client.query(sql).bind(params).await?;
+        Ok(resp)
+    }
+
+    async fn apply_migrations(&self) -> anyhow::Result<crate::migration::MigrationResult> {
+        MigrationRunner::new().apply_all(self).await
+    }
+
+    fn clone_box(&self) -> Arc<dyn DbConnection> {
+        Arc::new(self.clone())
     }
 }
 

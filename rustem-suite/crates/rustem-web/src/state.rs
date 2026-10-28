@@ -8,8 +8,8 @@
 //! anti-fuerza bruta.
 
 use rustem_auth::brute_force::BruteForceGuard;
-use rustem_db::SurrealConnection;
 use rustem_db::store::TenantContext;
+use rustem_db::{DbConnection, SurrealConnection};
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
@@ -18,7 +18,7 @@ use tokio::sync::RwLock;
 #[allow(dead_code)]
 pub struct AppState {
     /// Conexión a SurrealDB (opcional en tests).
-    pub db: Option<Arc<RwLock<SurrealConnection>>>,
+    pub db: Option<Arc<RwLock<Arc<dyn DbConnection>>>>,
     /// URL base de la aplicación.
     pub base_url: String,
     /// Guard anti-fuerza bruta para el endpoint de login.
@@ -48,7 +48,8 @@ impl AppState {
         {
             Ok(conn) => {
                 conn.apply_migrations().await?;
-                Some(Arc::new(RwLock::new(conn)))
+                let conn_arc: Arc<dyn DbConnection> = Arc::new(conn);
+                Some(Arc::new(RwLock::new(conn_arc)))
             }
             Err(e) => {
                 tracing::warn!("No se pudo conectar a SurrealDB: {e}");

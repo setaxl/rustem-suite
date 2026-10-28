@@ -14,10 +14,20 @@
 
 use async_trait::async_trait;
 use serde_json::Value;
+use std::sync::Arc;
 use surrealdb::Response;
 use tracing::{debug, info};
 
-use crate::connection::SurrealConnection;
+use crate::connection::DbConnection;
+
+/// Convierte un vector de pares (nombre, valor) a un objeto JSON para parámetros de SurrealDB.
+pub fn params_to_value(params: Vec<(String, Value)>) -> Value {
+    let mut map = serde_json::Map::with_capacity(params.len());
+    for (key, value) in params {
+        map.insert(key, value);
+    }
+    Value::Object(map)
+}
 
 /// Contexto de ejecución con información del tenant activo.
 /// Se inyecta desde la sesión HTTP en el middleware de Axum.
@@ -72,7 +82,7 @@ pub struct AuditResult {
 #[async_trait]
 pub trait SurrealStore {
     /// Devuelve la conexión subyacente a SurrealDB.
-    fn connection(&self) -> &SurrealConnection;
+    fn connection(&self) -> &dyn DbConnection;
 
     /// Devuelve el contexto de tenant actual.
     fn tenant_context(&self) -> &TenantContext;
@@ -157,21 +167,21 @@ pub trait SurrealStore {
 
 /// Implementación concreta de [`SurrealStore`] sobre SurrealDB.
 pub struct SurrealStoreImpl {
-    conn: SurrealConnection,
+    conn: Arc<dyn DbConnection>,
     ctx: TenantContext,
 }
 
 impl SurrealStoreImpl {
     /// Crea una nueva instancia con conexión y contexto de tenant.
-    pub fn new(conn: SurrealConnection, ctx: TenantContext) -> Self {
+    pub fn new(conn: Arc<dyn DbConnection>, ctx: TenantContext) -> Self {
         Self { conn, ctx }
     }
 }
 
 #[async_trait]
 impl SurrealStore for SurrealStoreImpl {
-    fn connection(&self) -> &SurrealConnection {
-        &self.conn
+    fn connection(&self) -> &dyn DbConnection {
+        self.conn.as_ref()
     }
 
     fn tenant_context(&self) -> &TenantContext {
@@ -194,7 +204,7 @@ impl SurrealStore for SurrealStoreImpl {
             self.ctx.tenant_id, sql
         );
 
-        let resp = self.conn.query(sql, params).await?;
+        let resp = self.conn.query(sql, params_to_value(params)).await?;
         Ok(resp)
     }
 
@@ -218,7 +228,7 @@ impl SurrealStore for SurrealStoreImpl {
         let sql = format!("CREATE {table} CONTENT $data");
         let params: Vec<(String, Value)> = vec![("$data".to_string(), data)];
 
-        let mut resp = self.conn.query(&sql, params).await?;
+        let mut resp = self.conn.query(&sql, params_to_value(params)).await?;
         let created: Option<Value> = resp.take(0)?;
 
         // Registrar auditoría de creación.
@@ -241,13 +251,13 @@ impl SurrealStore for SurrealStoreImpl {
             .conn
             .query(
                 &sql_select,
-                vec![
+                params_to_value(vec![
                     ("$id".to_string(), Value::String(record_id.to_string())),
                     (
                         "$tenant_id".to_string(),
                         Value::String(self.ctx.tenant_id.clone()),
                     ),
-                ],
+                ]),
             )
             .await?
             .take::<Vec<Value>>(0)?
@@ -264,7 +274,7 @@ impl SurrealStore for SurrealStoreImpl {
         let sql = format!("UPDATE {table}:{record_id} CONTENT $data");
         let params: Vec<(String, Value)> = vec![("$data".to_string(), data)];
 
-        let mut resp = self.conn.query(&sql, params).await?;
+        let mut resp = self.conn.query(&sql, params_to_value(params)).await?;
         let updated: Option<Value> = resp.take(0)?;
 
         // Registrar auditoría de actualización.
@@ -291,13 +301,13 @@ impl SurrealStore for SurrealStoreImpl {
             .conn
             .query(
                 &sql_select,
-                vec![
+                params_to_value(vec![
                     ("$id".to_string(), Value::String(record_id.to_string())),
                     (
                         "$tenant_id".to_string(),
                         Value::String(self.ctx.tenant_id.clone()),
                     ),
-                ],
+                ]),
             )
             .await?
             .take::<Vec<Value>>(0)?
@@ -307,7 +317,7 @@ impl SurrealStore for SurrealStoreImpl {
         let sql = format!("DELETE {table}:{record_id}");
         let params: Vec<(String, Value)> = vec![];
 
-        let mut resp = self.conn.query(&sql, params).await?;
+        let mut resp = self.conn.query(&sql, params_to_value(params)).await?;
         let deleted: Option<Value> = resp.take(0)?;
 
         // Registrar auditoría de eliminación.
@@ -380,7 +390,7 @@ impl SurrealStore for SurrealStoreImpl {
             ("$created_at".to_string(), Value::String(now.clone())),
         ];
 
-        let mut resp = self.conn.query(sql, params).await?;
+        let mut resp = self.conn.query(sql, params_to_value(params)).await?;
         let created: Vec<Value> = resp.take(0)?;
 
         let audit_log_id = created
@@ -401,7 +411,7 @@ impl SurrealStore for SurrealStoreImpl {
                 ("$aid".to_string(), Value::String(audit_log_id.clone())),
                 ("$created_at".to_string(), Value::String(now)),
             ];
-            self.conn.query(edge_sql, edge_params).await?;
+            self.conn.query(edge_sql, params_to_value(edge_params)).await?;
         }
 
         info!(
@@ -428,7 +438,7 @@ impl SurrealStore for SurrealStoreImpl {
         )];
         params_with_tenant.extend(params);
 
-        let resp = self.conn.query(sql, params_with_tenant).await?;
+        let resp = self.conn.query(sql, params_to_value(params_with_tenant)).await?;
         Ok(resp)
     }
 
@@ -470,7 +480,7 @@ impl SurrealStore for SurrealStoreImpl {
             ("$data".to_string(), edge_data),
         ];
 
-        let mut resp = self.conn.query(&edge_sql, params).await?;
+        let mut resp = self.conn.query(&edge_sql, params_to_value(params)).await?;
         let created: Option<Value> = resp.take(0)?;
         Ok(created)
     }
@@ -545,7 +555,7 @@ impl SurrealStore for SurrealStoreImpl {
             ),
         ];
 
-        let mut resp = self.conn.query(tx_sql, params).await?;
+        let mut resp = self.conn.query(tx_sql, params_to_value(params)).await?;
         let created: Option<Value> = resp.take(0)?;
         Ok(created)
     }
@@ -575,7 +585,7 @@ impl SurrealStore for SurrealStoreImpl {
         }
         sql.push_str(" ORDER BY date DESC");
 
-        let resp = self.conn.query(&sql, params).await?;
+        let resp = self.conn.query(&sql, params_to_value(params)).await?;
         Ok(resp)
     }
 
@@ -585,7 +595,7 @@ impl SurrealStore for SurrealStoreImpl {
             "$tenant_id".to_string(),
             Value::String(self.ctx.tenant_id.clone()),
         )];
-        let resp = self.conn.query(sql, params).await?;
+        let resp = self.conn.query(sql, params_to_value(params)).await?;
         Ok(resp)
     }
 }

@@ -14,9 +14,9 @@ pub mod connection;
 pub mod migration;
 pub mod store;
 
-pub use connection::SurrealConnection;
+pub use connection::{DbConnection, SurrealConnection};
 pub use migration::{MigrationResult, MigrationRunner};
-pub use store::{SurrealStore, TenantContext};
+pub use store::{params_to_value, SurrealStore, TenantContext};
 
 #[cfg(test)]
 mod tests {

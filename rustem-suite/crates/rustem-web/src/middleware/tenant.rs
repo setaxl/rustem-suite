@@ -24,11 +24,20 @@ use tracing::{debug, warn};
 
 use crate::state::AppState;
 use rustem_auth::session::SessionToken;
-use rustem_db::connection::SurrealConnection;
+use rustem_db::DbConnection;
 use rustem_db::store::TenantContext;
 
 /// Nombre de la cookie de sesión.
 pub const SESSION_COOKIE_NAME: &str = "session_token";
+
+/// Convierte un vector de pares (nombre, valor) a un objeto JSON para parámetros de SurrealDB.
+fn params_to_value(params: Vec<(String, serde_json::Value)>) -> serde_json::Value {
+    let mut map = serde_json::Map::with_capacity(params.len());
+    for (key, value) in params {
+        map.insert(key, value);
+    }
+    serde_json::Value::Object(map)
+}
 
 /// Datos de sesión resueltos (extraídos de SurrealDB).
 #[derive(Debug, Clone)]
@@ -39,7 +48,7 @@ pub struct ResolvedSession {
 
 /// Resuelve la sesión a partir del token (hash SHA-256).
 async fn resolve_session(
-    conn: &SurrealConnection,
+    conn: &dyn DbConnection,
     token: &str,
 ) -> anyhow::Result<Option<ResolvedSession>> {
     let token_hash = SessionToken(token.to_string()).hash();
@@ -61,7 +70,7 @@ async fn resolve_session(
         ),
     ];
 
-    let mut resp = conn.query(sql, params).await?;
+    let mut resp = conn.query(sql, params_to_value(params)).await?;
     let sessions: Vec<serde_json::Value> = resp.take(0)?;
 
     if let Some(s) = sessions.into_iter().next() {
@@ -110,7 +119,7 @@ pub async fn tenant_middleware(
         .and_then(parse_session_cookie);
 
     let tenant_ctx = match session_token {
-        Some(token) => match resolve_session(&conn_read, &token).await {
+        Some(token) => match resolve_session(conn_read.as_ref(), &token).await {
             Ok(Some(session)) => {
                 debug!(
                     "Sesión resuelta: user={} company={:?}",
@@ -119,7 +128,7 @@ pub async fn tenant_middleware(
 
                 // Resolver roles y permisos del usuario mediante grafo de SurrealDB.
                 let (roles, permissions) =
-                    resolve_user_roles_and_permissions(&conn_read, &session.user_id)
+                    resolve_user_roles_and_permissions(conn_read.as_ref(), &session.user_id)
                         .await
                         .unwrap_or_default();
 
@@ -181,7 +190,7 @@ fn parse_session_cookie(cookie_header: &str) -> Option<String> {
 /// `user -> HAS_ROLE -> role -> CAN_ACCESS -> permission`.
 /// Devuelve vectores vacíos si no hay datos o falla la consulta.
 async fn resolve_user_roles_and_permissions(
-    conn: &SurrealConnection,
+    conn: &dyn DbConnection,
     user_id: &str,
 ) -> anyhow::Result<(Vec<String>, Vec<String>)> {
     let conn_read = conn;
@@ -195,7 +204,7 @@ async fn resolve_user_roles_and_permissions(
     "#;
     let params: Vec<(String, Value)> =
         vec![("$user_id".to_string(), Value::String(user_id.to_string()))];
-    let roles = match conn_read.query(sql_roles, params.clone()).await {
+    let roles = match conn_read.query(sql_roles, params_to_value(params.clone())).await {
         Ok(mut resp) => resp
             .take::<Vec<Value>>(0)
             .unwrap_or_default()
@@ -218,7 +227,7 @@ async fn resolve_user_roles_and_permissions(
         ->CAN_ACCESS->
         permission
     "#;
-    let permissions = match conn_read.query(sql_perms, params).await {
+    let permissions = match conn_read.query(sql_perms, params_to_value(params)).await {
         Ok(mut resp) => resp
             .take::<Vec<Value>>(0)
             .unwrap_or_default()
