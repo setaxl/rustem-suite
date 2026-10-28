@@ -242,4 +242,20 @@ mod tests {
         assert_eq!(order.total_cents, 5000);
         assert_eq!(order.quote_id, Some("q1".to_string()));
     }
+
+    #[test]
+    fn customer_view_data_creation() {
+        let cvd = CustomerViewData {
+            id: "c1".to_string(),
+            rif: "V-12345678-9".to_string(),
+            name: "Cliente Test".to_string(),
+            vat_condition: "ordinario".to_string(),
+            address: Some("Calle 1".to_string()),
+            phone: Some("1234567".to_string()),
+            email: Some("test@test.com".to_string()),
+        };
+        assert_eq!(cvd.id, "c1");
+        assert_eq!(cvd.rif, "V-12345678-9");
+        assert_eq!(cvd.name, "Cliente Test");
+    }
 }
