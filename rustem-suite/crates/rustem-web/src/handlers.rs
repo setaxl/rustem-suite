@@ -3670,4 +3670,80 @@ mod tests {
         let result = facturas_crear(State(state), ctx, axum::Form(form)).await;
         assert!(result.is_ok());
     }
+
+    #[tokio::test]
+    async fn movimientos_entrada_sin_db() {
+        let state = crate::state::AppState::for_tests();
+        let ctx = TenantCtx(rustem_db::store::TenantContext::new("company-test"));
+        let form = MovimientoEntradaForm {
+            product_id: "prod-1".to_string(),
+            warehouse_id: "wh-1".to_string(),
+            quantity: 10,
+            unit_cost_cents: 1000,
+            reference: Some("REF-1".to_string()),
+        };
+        let result = movimientos_entrada(State(state), ctx, axum::Form(form)).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn movimientos_salida_sin_db() {
+        let state = crate::state::AppState::for_tests();
+        let ctx = TenantCtx(rustem_db::store::TenantContext::new("company-test"));
+        let form = MovimientoSalidaForm {
+            product_id: "prod-1".to_string(),
+            warehouse_id: "wh-1".to_string(),
+            quantity: 5,
+            unit_cost_cents: 1000,
+            reference: Some("REF-2".to_string()),
+        };
+        let result = movimientos_salida(State(state), ctx, axum::Form(form)).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn movimientos_ajuste_sin_db() {
+        let state = crate::state::AppState::for_tests();
+        let ctx = TenantCtx(rustem_db::store::TenantContext::new("company-test"));
+        let form = MovimientoAjusteForm {
+            product_id: "prod-1".to_string(),
+            warehouse_id: "wh-1".to_string(),
+            quantity: 3,
+            unit_cost_cents: 1000,
+            notes: Some("Ajuste".to_string()),
+        };
+        let result = movimientos_ajuste(State(state), ctx, axum::Form(form)).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn movimientos_transferencia_sin_db() {
+        let state = crate::state::AppState::for_tests();
+        let ctx = TenantCtx(rustem_db::store::TenantContext::new("company-test"));
+        let form = MovimientoTransferenciaForm {
+            product_id: "prod-1".to_string(),
+            from_warehouse_id: "wh-1".to_string(),
+            to_warehouse_id: "wh-2".to_string(),
+            quantity: 2,
+            unit_cost_cents: 1000,
+        };
+        let result = movimientos_transferencia(State(state), ctx, axum::Form(form)).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn cotizaciones_list_sin_db() {
+        let state = crate::state::AppState::for_tests();
+        let ctx = TenantCtx(rustem_db::store::TenantContext::new("company-test"));
+        let html = cotizaciones_list(State(state), ctx).await;
+        assert!(html.0.contains("Sin base de datos disponible"));
+    }
+
+    #[tokio::test]
+    async fn pedidos_list_sin_db() {
+        let state = crate::state::AppState::for_tests();
+        let ctx = TenantCtx(rustem_db::store::TenantContext::new("company-test"));
+        let html = pedidos_list(State(state), ctx).await;
+        assert!(html.0.contains("Sin base de datos disponible"));
+    }
 }
