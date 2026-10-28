@@ -16,7 +16,6 @@ pub mod tenant;
 pub use rate_limit::rate_limit_middleware;
 
 use axum::extract::Request;
-use axum::http::StatusCode;
 use axum::middleware::Next;
 use axum::response::Response;
 use http::header;

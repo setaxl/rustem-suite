@@ -155,11 +155,11 @@ pub fn encrypt_json_field(
     field_name: &str,
     master_key: &MasterKey,
 ) -> DomainResult<()> {
-    if let Some(field_value) = value.get_mut(field_name) {
-        if let Some(text) = field_value.as_str() {
-            let encrypted = encrypt_field(text.as_bytes(), master_key)?;
-            *field_value = Value::String(encrypted);
-        }
+    if let Some(field_value) = value.get_mut(field_name)
+        && let Some(text) = field_value.as_str()
+    {
+        let encrypted = encrypt_field(text.as_bytes(), master_key)?;
+        *field_value = Value::String(encrypted);
     }
     Ok(())
 }
@@ -176,13 +176,13 @@ pub fn decrypt_json_field(
     field_name: &str,
     master_key: &MasterKey,
 ) -> DomainResult<()> {
-    if let Some(field_value) = value.get_mut(field_name) {
-        if let Some(text) = field_value.as_str() {
-            let decrypted = decrypt_field(text, master_key)?;
-            let decrypted_text = String::from_utf8(decrypted)
-                .map_err(|e| RustemError::crypto(format!("texto descifrado inválido: {e}")))?;
-            *field_value = Value::String(decrypted_text);
-        }
+    if let Some(field_value) = value.get_mut(field_name)
+        && let Some(text) = field_value.as_str()
+    {
+        let decrypted = decrypt_field(text, master_key)?;
+        let decrypted_text = String::from_utf8(decrypted)
+            .map_err(|e| RustemError::crypto(format!("texto descifrado inválido: {e}")))?;
+        *field_value = Value::String(decrypted_text);
     }
     Ok(())
 }
