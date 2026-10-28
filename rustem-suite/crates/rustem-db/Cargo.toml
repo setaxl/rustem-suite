@@ -20,3 +20,4 @@ rustem-core = { path = "../rustem-core" }
 
 [dev-dependencies]
 anyhow = { workspace = true }
+tokio = { workspace = true }
