@@ -636,4 +636,51 @@ mod tests {
             Some("company-1")
         );
     }
+
+    #[test]
+    fn params_to_value_converts_pairs_to_json() {
+        // Prueba que params_to_value convierte pares (clave, valor) a objeto JSON.
+        let params = vec![
+            ("$tenant_id".to_string(), Value::String("company-1".to_string())),
+            ("$user_id".to_string(), Value::String("user-1".to_string())),
+        ];
+        let result = params_to_value(params);
+        assert_eq!(
+            result.get("$tenant_id").and_then(|v| v.as_str()),
+            Some("company-1")
+        );
+        assert_eq!(
+            result.get("$user_id").and_then(|v| v.as_str()),
+            Some("user-1")
+        );
+    }
+
+    #[test]
+    fn params_to_value_empty_returns_empty_object() {
+        // Prueba que params_to_value con lista vacía devuelve objeto JSON vacío.
+        let params: Vec<(String, Value)> = vec![];
+        let result = params_to_value(params);
+        assert!(result.is_object());
+        assert_eq!(result.as_object().unwrap().len(), 0);
+    }
+
+    #[test]
+    fn tenant_context_has_permission_case_sensitive() {
+        // Prueba que has_permission distingue mayúsculas/minúsculas.
+        let mut ctx = TenantContext::new("tenant-1");
+        ctx.permissions.push("sales:read".to_string());
+        assert!(ctx.has_permission("sales", "read"));
+        assert!(!ctx.has_permission("SALES", "read"));
+        assert!(!ctx.has_permission("sales", "READ"));
+    }
+
+    #[test]
+    fn tenant_context_has_role_case_sensitive() {
+        // Prueba que has_role distingue mayúsculas/minúsculas.
+        let mut ctx = TenantContext::new("tenant-1");
+        ctx.roles.push("Owner".to_string());
+        assert!(ctx.has_role("Owner"));
+        assert!(!ctx.has_role("owner"));
+        assert!(!ctx.has_role("OWNER"));
+    }
 }
