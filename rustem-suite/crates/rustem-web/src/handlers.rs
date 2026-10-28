@@ -3525,4 +3525,60 @@ mod tests {
         assert!(html.0.contains("Admin"));
         assert!(!html.0.contains("<script"));
     }
+
+    #[tokio::test]
+    async fn almacenes_list_sin_db() {
+        let state = crate::state::AppState::for_tests();
+        let ctx = TenantCtx(rustem_db::store::TenantContext::new("company-test"));
+        let html = almacenes_list(State(state), ctx).await;
+        assert!(html.0.contains("Sin base de datos disponible"));
+    }
+
+    #[tokio::test]
+    async fn productos_list_sin_db() {
+        let state = crate::state::AppState::for_tests();
+        let ctx = TenantCtx(rustem_db::store::TenantContext::new("company-test"));
+        let html = productos_list(State(state), ctx).await;
+        assert!(html.0.contains("Sin base de datos disponible"));
+    }
+
+    #[tokio::test]
+    async fn clientes_list_sin_db() {
+        let state = crate::state::AppState::for_tests();
+        let ctx = TenantCtx(rustem_db::store::TenantContext::new("company-test"));
+        let html = clientes_list(State(state), ctx).await;
+        assert!(html.0.contains("Sin base de datos disponible"));
+    }
+
+    #[tokio::test]
+    async fn cuentas_list_sin_db() {
+        let state = crate::state::AppState::for_tests();
+        let ctx = TenantCtx(rustem_db::store::TenantContext::new("company-test"));
+        let html = cuentas_list(State(state), ctx).await;
+        assert!(html.0.contains("Sin base de datos disponible"));
+    }
+
+    #[tokio::test]
+    async fn asientos_list_sin_db() {
+        let state = crate::state::AppState::for_tests();
+        let ctx = TenantCtx(rustem_db::store::TenantContext::new("company-test"));
+        let html = asientos_list(State(state), ctx).await;
+        assert!(html.0.contains("Sin base de datos disponible"));
+    }
+
+    #[tokio::test]
+    async fn facturas_list_sin_db() {
+        let state = crate::state::AppState::for_tests();
+        let ctx = TenantCtx(rustem_db::store::TenantContext::new("company-test"));
+        let html = facturas_list(State(state), ctx).await;
+        assert!(html.0.contains("Sin base de datos disponible"));
+    }
+
+    #[tokio::test]
+    async fn kardex_sin_db() {
+        let state = crate::state::AppState::for_tests();
+        let ctx = TenantCtx(rustem_db::store::TenantContext::new("company-test"));
+        let html = kardex(State(state), ctx).await;
+        assert!(html.0.contains("Sin base de datos disponible"));
+    }
 }
