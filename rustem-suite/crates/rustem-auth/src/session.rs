@@ -43,6 +43,16 @@ pub struct Session {
 #[derive(Debug, Clone)]
 pub struct SessionToken(pub String);
 
+impl Zeroize for Session {
+    fn zeroize(&mut self) {
+        self.token_hash.zeroize();
+        self.user_id.zeroize();
+        self.company_id.zeroize();
+        self.ip_address.zeroize();
+        self.user_agent.zeroize();
+    }
+}
+
 impl Zeroize for SessionToken {
     fn zeroize(&mut self) {
         self.0.zeroize();
