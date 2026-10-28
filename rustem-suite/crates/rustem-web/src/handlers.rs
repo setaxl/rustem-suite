@@ -3746,4 +3746,89 @@ mod tests {
         let html = pedidos_list(State(state), ctx).await;
         assert!(html.0.contains("Sin base de datos disponible"));
     }
+
+    #[tokio::test]
+    async fn almacenes_actualizar_sin_db() {
+        let state = crate::state::AppState::for_tests();
+        let ctx = TenantCtx(rustem_db::store::TenantContext::new("company-test"));
+        let form = AlmacenForm {
+            name: "Test".to_string(),
+            address: None,
+            phone: None,
+            is_active: None,
+        };
+        let result = almacenes_actualizar(
+            State(state),
+            axum::extract::Path("id-1".to_string()),
+            ctx,
+            axum::Form(form),
+        )
+        .await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn productos_editar_sin_db() {
+        let state = crate::state::AppState::for_tests();
+        let ctx = TenantCtx(rustem_db::store::TenantContext::new("company-test"));
+        let html = productos_editar(
+            State(state),
+            axum::extract::Path("id-1".to_string()),
+            ctx,
+        )
+        .await;
+        assert!(html.0.contains("Sin base de datos disponible"));
+    }
+
+    #[tokio::test]
+    async fn clientes_editar_sin_db() {
+        let state = crate::state::AppState::for_tests();
+        let ctx = TenantCtx(rustem_db::store::TenantContext::new("company-test"));
+        let html = clientes_editar(
+            State(state),
+            axum::extract::Path("id-1".to_string()),
+            ctx,
+        )
+        .await;
+        assert!(html.0.contains("Sin base de datos disponible"));
+    }
+
+    #[tokio::test]
+    async fn cuentas_editar_sin_db() {
+        let state = crate::state::AppState::for_tests();
+        let ctx = TenantCtx(rustem_db::store::TenantContext::new("company-test"));
+        let html = cuentas_editar(
+            State(state),
+            axum::extract::Path("code-1".to_string()),
+            ctx,
+        )
+        .await;
+        assert!(html.0.contains("Sin base de datos disponible"));
+    }
+
+    #[tokio::test]
+    async fn asientos_editar_sin_db() {
+        let state = crate::state::AppState::for_tests();
+        let ctx = TenantCtx(rustem_db::store::TenantContext::new("company-test"));
+        let html = asientos_editar(
+            State(state),
+            axum::extract::Path("id-1".to_string()),
+            ctx,
+        )
+        .await;
+        assert!(html.0.contains("Sin base de datos disponible"));
+    }
+
+    #[tokio::test]
+    async fn cotizaciones_crear_sin_db() {
+        let state = crate::state::AppState::for_tests();
+        let ctx = TenantCtx(rustem_db::store::TenantContext::new("company-test"));
+        let result = cotizaciones_crear(
+            State(state),
+            ctx,
+            axum::Form(serde_json::json!({})),
+        )
+        .await;
+        assert!(result.is_ok());
+    }
 }
