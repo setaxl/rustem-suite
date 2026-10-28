@@ -3831,4 +3831,103 @@ mod tests {
         .await;
         assert!(result.is_ok());
     }
+
+    #[tokio::test]
+    async fn productos_actualizar_sin_db() {
+        let state = crate::state::AppState::for_tests();
+        let ctx = TenantCtx(rustem_db::store::TenantContext::new("company-test"));
+        let form = ProductoForm {
+            sku: "SKU-1".to_string(),
+            name: "Test".to_string(),
+            description: None,
+            unit: None,
+            category: None,
+            vat_rate: None,
+            min_stock: None,
+        };
+        let result = productos_actualizar(
+            State(state),
+            axum::extract::Path("id-1".to_string()),
+            ctx,
+            axum::Form(form),
+        )
+        .await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn clientes_actualizar_sin_db() {
+        let state = crate::state::AppState::for_tests();
+        let ctx = TenantCtx(rustem_db::store::TenantContext::new("company-test"));
+        let form = CustomerForm {
+            rif: "V-12345678-9".to_string(),
+            name: "Test".to_string(),
+            vat_condition: "ordinario".to_string(),
+            address: None,
+            phone: None,
+            email: None,
+        };
+        let result = clientes_actualizar(
+            State(state),
+            axum::extract::Path("id-1".to_string()),
+            ctx,
+            axum::Form(form),
+        )
+        .await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn cuentas_actualizar_sin_db() {
+        let state = crate::state::AppState::for_tests();
+        let ctx = TenantCtx(rustem_db::store::TenantContext::new("company-test"));
+        let form = AccountForm {
+            code: "1000".to_string(),
+            name: "Test".to_string(),
+            account_type: "activo".to_string(),
+            level: None,
+            parent_code: None,
+            is_operational: None,
+        };
+        let result = cuentas_actualizar(
+            State(state),
+            axum::extract::Path("code-1".to_string()),
+            ctx,
+            axum::Form(form),
+        )
+        .await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn asientos_actualizar_sin_db() {
+        let state = crate::state::AppState::for_tests();
+        let ctx = TenantCtx(rustem_db::store::TenantContext::new("company-test"));
+        let form = AsientoForm {
+            date: "2024-01-01".to_string(),
+            description: "Test".to_string(),
+            lineas: vec![],
+        };
+        let result = asientos_actualizar(
+            State(state),
+            axum::extract::Path("id-1".to_string()),
+            ctx,
+            axum::Form(form),
+        )
+        .await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn factura_imprimir_sin_db() {
+        let state = crate::state::AppState::for_tests();
+        let ctx = TenantCtx(rustem_db::store::TenantContext::new("company-test"));
+        let html = factura_imprimir(
+            State(state),
+            axum::extract::Path("id-1".to_string()),
+            ctx,
+        )
+        .await;
+        assert!(html.0.contains("Sin base de datos disponible"));
+    }
 }
