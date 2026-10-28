@@ -3988,4 +3988,36 @@ mod tests {
         let html = facturas_nuevo(State(state), ctx).await;
         assert!(html.0.contains("Sin base de datos disponible"));
     }
+
+    #[tokio::test]
+    async fn asientos_crear_desde_venta_sin_db() {
+        use serde_json::json;
+        use axum::extract::Form;
+
+        let state = crate::state::AppState::for_tests();
+        let ctx = TenantCtx(rustem_db::store::TenantContext::new("company-test"));
+        let form = AsientoAutoForm {
+            date: "2024-01-01".to_string(),
+            description: "Test desde venta".to_string(),
+            lineas: vec![],
+        };
+        let result = asientos_crear_desde_venta(State(state), ctx, axum::Form(form)).await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn asientos_crear_desde_movimiento_sin_db() {
+        use serde_json::json;
+        use axum::extract::Form;
+
+        let state = crate::state::AppState::for_tests();
+        let ctx = TenantCtx(rustem_db::store::TenantContext::new("company-test"));
+        let form = AsientoAutoForm {
+            date: "2024-01-01".to_string(),
+            description: "Test desde movimiento".to_string(),
+            lineas: vec![],
+        };
+        let result = asientos_crear_desde_movimiento(State(state), ctx, axum::Form(form)).await;
+        assert!(result.is_ok());
+    }
 }
