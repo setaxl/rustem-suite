@@ -1,20 +1,8 @@
 [package]
 name = "rustem-frontend"
-description = "Componentes y vistas Leptos (SSR puro, cero JS en cliente)"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-anyhow = { workspace = true }
-thiserror = { workspace = true }
-serde = { workspace = true }
-serde_json = { workspace = true }
-leptos = { workspace = true }
-tracing = { workspace = true }
-rustem-core = { path = "../rustem-core" }
-rustem-auth = { path = "../rustem-auth" }
-rustem-inventory = { path = "../rustem-inventory" }
-rustem-sales = { path = "../rustem-sales" }
 
 [dev-dependencies]
-anyhow = { workspace = true }

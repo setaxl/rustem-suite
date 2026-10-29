@@ -1,6 +1,5 @@
 [package]
 name = "rustem-web"
-description = "Servidor Axum: rutas, handlers, middlewares y estáticos"
 version = "0.1.0"
 edition = "2024"
 
@@ -9,41 +8,18 @@ name = "rustem-web"
 path = "src/main.rs"
 
 [dependencies]
+axum = { workspace = true }
+tokio = { workspace = true }
 anyhow = { workspace = true }
-thiserror = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
-chrono = { workspace = true }
-rust_decimal = { workspace = true }
 tracing = { workspace = true }
-tracing-subscriber = { version = "0.3", default-features = false, features = ["fmt", "env-filter"] }
-tokio = { workspace = true }
-axum = { workspace = true }
-async-trait = { workspace = true }
-tower = { workspace = true }
-tower-http = { workspace = true }
+tracing-subscriber = { workspace = true }
 http = { workspace = true }
-hyper = { workspace = true }
-uuid = { workspace = true }
-secrecy = { workspace = true }
-rust-embed = { workspace = true }
-rustls = "0.23"
-tokio-rustls = "0.26"
-rustls-pemfile = "2.1"
-hyper-util = "0.1"
-http-body-util = "0.1"
-base64 = "0.22"
+http-body-util = { workspace = true }
 rustem-core = { path = "../rustem-core" }
-rustem-db = { path = "../rustem-db" }
 rustem-auth = { path = "../rustem-auth" }
-rustem-admin = { path = "../rustem-admin" }
+rustem-db = { path = "../rustem-db" }
 rustem-frontend = { path = "../rustem-frontend" }
-rustem-inventory = { path = "../rustem-inventory" }
-rustem-sales = { path = "../rustem-sales" }
-rustem-accounting = { path = "../rustem-accounting" }
 
 [dev-dependencies]
-anyhow = { workspace = true }
-surrealdb = { workspace = true }
-tokio = { workspace = true }
-http-body-util = { version = "0.1", features = ["full"] }

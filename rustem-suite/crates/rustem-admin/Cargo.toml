@@ -1,24 +1,8 @@
 [package]
 name = "rustem-admin"
-description = "Tenancy, roles, permisos (RBAC), usuarios y empresas"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-anyhow = { workspace = true }
-thiserror = { workspace = true }
-serde = { workspace = true }
-serde_json = { workspace = true }
-chrono = { workspace = true }
-rust_decimal = { workspace = true }
-tracing = { workspace = true }
-uuid = { workspace = true }
-axum = { workspace = true }
-http = { workspace = true }
-validator = { workspace = true }
-rustem-core = { path = "../rustem-core" }
-rustem-db = { path = "../rustem-db" }
-rustem-auth = { path = "../rustem-auth" }
 
 [dev-dependencies]
-anyhow = { workspace = true }
