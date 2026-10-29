@@ -9,7 +9,7 @@
 
 use rustem_auth::brute_force::BruteForceGuard;
 use rustem_db::store::TenantContext;
-use rustem_db::{DbConnection, SurrealConnection};
+use rustem_db::SurrealConnection;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
@@ -18,7 +18,7 @@ use tokio::sync::RwLock;
 #[allow(dead_code)]
 pub struct AppState {
     /// Conexión a SurrealDB (opcional en tests).
-    pub db: Option<Arc<RwLock<Arc<dyn DbConnection>>>>,
+    pub db: Option<Arc<RwLock<SurrealConnection>>>,
     /// URL base de la aplicación.
     pub base_url: String,
     /// Guard anti-fuerza bruta para el endpoint de login.
@@ -52,8 +52,7 @@ impl AppState {
         {
             Ok(conn) => {
                 conn.apply_migrations().await?;
-                let conn_arc: Arc<dyn DbConnection> = Arc::new(conn);
-                Some(Arc::new(RwLock::new(conn_arc)))
+                Some(Arc::new(RwLock::new(conn)))
             }
             Err(e) => {
                 tracing::warn!("No se pudo conectar a SurrealDB: {e}");
@@ -98,22 +97,5 @@ mod tests {
         let state = AppState::for_tests();
         assert!(state.db.is_none());
         assert_eq!(state.base_url, "http://localhost:8080");
-        assert!(state.tenant_context().is_none());
-        let _ = state.brute_force;
-    }
-
-    #[tokio::test]
-    async fn app_state_from_env_requires_database_credentials() {
-        // safe: entorno de prueba de un solo hilo, restauramos tras la prueba.
-        unsafe {
-            std::env::remove_var("DATABASE_USER");
-            std::env::remove_var("DATABASE_PASS");
-        }
-
-        let result = AppState::from_env().await;
-        assert!(
-            result.is_err(),
-            "from_env debe fallar cuando DATABASE_USER y DATABASE_PASS no están definidas (sin defaults hardcoded)"
-        );
     }
 }

@@ -5,17 +5,19 @@ edition = "2024"
 
 [dependencies]
 anyhow = { workspace = true }
-serde = { workspace = true }
-serde_json = { workspace = true }
+async-trait = { workspace = true }
+axum = { workspace = true }
 chrono = { workspace = true }
 rust_decimal = { workspace = true }
-uuid = { workspace = true }
+sha2 = { workspace = true }
+hex = { workspace = true }
+secrecy = { workspace = true }
 thiserror = { workspace = true }
 zeroize = { workspace = true }
 getrandom = { workspace = true }
-sha2 = { workspace = true }
-hex = { workspace = true }
-time = { workspace = true }
+uuid = { workspace = true }
 rustem-core = { path = "../rustem-core" }
+serde = { workspace = true }
 
 [dev-dependencies]
+proptest = "1.0"

@@ -22,8 +22,8 @@ impl AppRouter {
         let state = std::sync::Arc::new(self.state);
         Router::new()
             .route("/", axum::routing::get(crate::handlers::root))
-            .route("/login", axum::routing::get(crate::handlers::login_get))
-            .route("/logout", axum::routing::post(crate::handlers::logout_post))
+            .route("/login", axum::routing::get(crate::handlers::login::login_get))
+            .route("/logout", axum::routing::post(crate::handlers::logout::logout_post))
     }
 }
 

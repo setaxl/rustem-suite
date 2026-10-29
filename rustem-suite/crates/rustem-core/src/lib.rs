@@ -264,6 +264,7 @@ impl Rif {
     }
 
     /// Calcula el digito de control para un RIF dado.
+#[allow(clippy::let_and_return)]
     fn compute_check_digit(prefix: RifPrefix, digits: &[u8; 8]) -> u8 {
         // Pesos para el algoritmo de digito de control RIF venezolano
         let weights: [u8; 8] = [2, 9, 8, 7, 6, 5, 4, 3];
