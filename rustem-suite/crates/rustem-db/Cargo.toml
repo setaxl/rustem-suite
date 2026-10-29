@@ -4,5 +4,14 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+anyhow = { workspace = true }
+async-trait = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+surrealdb = { workspace = true }
+rustem-core = { path = "../rustem-core" }
+chrono = { workspace = true }
+tracing = { workspace = true }
+rust-embed = { workspace = true }
 
 [dev-dependencies]
