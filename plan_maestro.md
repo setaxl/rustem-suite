@@ -143,9 +143,11 @@
   * *Entregable:* Imagen de Podman lista para producción ejecutando en entornos estándar.
 
 * **F6-03 (L) — Batería de Pruebas "Guardián Cero JS", Cobertura y Carga:**
-  * Ejecución de `cargo-llvm-cov` para validar cobertura $\ge 85\%$ en módulos de dominio.
+  * Ejecución de `cargo-llvm-cov` para validar cobertura $\ge 85\%$ en módulos de dominio. **Cobertura actual: ~69.85% (líneas), ~73.81% (funciones).** Progreso: +7.78% desde el inicio de la fase.
   * Pruebas de estrés con `oha` contra los handlers del servidor.
   * Test sintáctico automatizado que valida la ausencia total de `<script` y `on*=` en la salida HTML.
+  * **Nueva infraestructura de pruebas sin DB:** Trait `DbConnection` y enum `DbResponse` en `rustem-db` permiten probar handlers, middlewares y store sin SurrealDB real. `MockDbConnection` implementa `DbConnection`.
+  * **Nuevos tests agregados:** 50+ pruebas para handlers HTML (db=None), 7 pruebas para middleware tenant, 14 pruebas para rustem-db (DbResponse::take, MigrationRunner, params_to_value).
   * *Entregable:* Reportes de rendimiento p95 < 200 ms y cero hallazgos en `cargo audit`.
 
 ---
@@ -167,7 +169,7 @@
 * **Fase 3:** Kardex de inventario cuadrado con valoración FIFO/AVCO; cero posibilidad de stock negativo no autorizado.
 * **Fase 4:** Factura SENIAT emitida con número de control correlativo, cálculo exacto de IVA e IGTF, e impresión CSS lista.
 * **Fase 5:** Invariante de partida doble comprobado ($\sum \text{Débitos} = \sum \text{Créditos}$); asientos automáticos generados atómicamente.
-* **Fase 6:** Cobertura de código $\ge 85\%$ en dominio, `oha` reporta p95 < 200 ms, y contenedor Podman ejecutable de forma autónoma.
+* **Fase 6:** Cobertura de código $\ge 85\%$ en dominio (actual: ~69.85%), `oha` reporta p95 < 200 ms, y contenedor Podman ejecutable de forma autónoma.
 
 ---
 

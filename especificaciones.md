@@ -68,6 +68,7 @@ El ERP se diseñará con adaptación contable y fiscal local:
   * Modelado en Grafo mediante `RELATE` donde aplique (pistas de auditoría, trazabilidad de movimientos de inventario y matriz RBAC).
   * Transacciones ACID estrictas para asientos contables y kardex de inventario.
   * Consultas 100% parametrizadas (prohibida la interpolación directa de cadenas).
+  * **Capa de abstracción `DbConnection`:** Trait que permite usar conexión real (`SurrealConnection`) o mock (`MockDbConnection`) en pruebas. El enum `DbResponse` encapsula la respuesta (`Real(surrealdb::Response)` o `Mock(Vec<serde_json::Value>)`). Método `take<T>` genérico para deserializar resultados.
 * **Autenticación & Sesiones:**
   * Sistema de sesiones propio cargado en SurrealDB.
   * Cookies seguras: `httpOnly`, `Secure`, `SameSite=Lax`.
@@ -150,6 +151,8 @@ rustem-suite/
 4. **Guardián "CERO JS":** Test automatizado que inspecciona el HTML resultante de todos los endpoints de presentación y **falla inmediatamente** si detecta las subcadenas `<script`, o atributos que inicien con `on*` (ej. `onclick=`).
 5. **E2E (Fantoccini + Headless Browser nativo en Fedora):** Automatización de flujos completos: Login -> Crear Empresa -> Inventario -> Venta con IGTF/IVA -> Asiento Contable Automático.
 6. **Seguridad y Rendimiento:** Inspección con `cargo audit`, tests de estrés contra el endpoint de login y benchmarking con `criterion` u `oha`.
+7. **Cobertura de Código:** Uso de `cargo-llvm-cov` para medir cobertura. Objetivo: ≥85% en módulos de dominio. Cobertura actual: ~69.85% (líneas), ~73.81% (funciones).
+8. **Mock de Base de Datos:** Trait `DbConnection` y enum `DbResponse` en `rustem-db` permiten pruebas sin SurrealDB real. `MockDbConnection` implementa `DbConnection` para pruebas de handlers, middlewares y store sin necesidad de base de datos activa.
 
 ---
 
@@ -162,3 +165,4 @@ rustem-suite/
   * `cargo clippy -- -D warnings`
   * `cargo fmt --check`
   * `cargo test`
+  * `cargo llvm-cov --workspace` (verificar cobertura ≥85% en módulos de dominio)

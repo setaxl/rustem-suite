@@ -1,8 +1,48 @@
-# Rustem Suite — Correcciones de Seguridad y Fases 3 a 6 (Implementación Plan)
+# Rustem Suite — Correcciones de Seguridad y Fases 3 a 6 (Implementación Plan) (EN PROGRESO)
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **Estado:** 🔄 **EN PROGRESO** - 29 de octubre 2026
 
 **Goal:** Llevar Rustem Suite a producción: corregir hallazgos de seguridad críticos, completar pruebas de integración con SurrealDB real para Fases 3-5, e implementar la Fase 6 (cifrado en reposo, TLS, cobertura, pruebas de carga).
+
+**Progreso de cobertura:** 69.85% líneas / 73.81% funciones (objetivo: ≥85%)
+
+**Mejoras implementadas durante esta sesión (29 de octubre 2026):**
+
+### Correcciones de Seguridad (Fase A)
+- **Task 1 ✅:** Credenciales hardcoded eliminadas - `login_post` retorna `StatusCode::SERVICE_UNAVAILABLE` cuando no hay DB
+- **Task 2 ✅:** Defaults inseguros `root/root` eliminados de `DATABASE_USER`/`DATABASE_PASS` en `state.rs`
+- **Task 3 ✅:** Escape HTML implementado en `rustem-core/src/html_escape.rs` y aplicado en handlers
+- **Task 4 ✅:** `.unwrap()` en expiración de sesión reemplazado con manejo graceful
+- **Task 5 ✅:** `BruteForceGuard` con `cleanup_stale()` para eliminar entradas expiradas
+
+### Nueva Infraestructura de Pruebas
+- **Trait `DbConnection`** en `crates/rustem-db/src/connection.rs` con métodos `query`, `execute`, `apply_migrations`, `clone_box`
+- **Enum `DbResponse`** con variantes `Real(surrealdb::Response)` y `Mock(Vec<serde_json::Value>)`, método `take<T>` genérico
+- **`MockDbConnection`** implementa `DbConnection` para pruebas sin SurrealDB real
+- **`MockDbConnectionWithSession`** retorna datos de sesión válidos para pruebas de `resolve_session`
+- **`MockDbConnectionWithRoles`** retorna roles y permisos para pruebas de `resolve_user_roles_and_permissions`
+
+### Nuevos Tests (50+ pruebas)
+- **rustem-web/src/handlers.rs:** 53 tests para handlers HTML con `db=None` (login, register, almacenes, productos, clientes, cuentas, asientos, facturas, kardex, cotizaciones, pedidos, inventario, ventas, contabilidad, admin)
+- **rustem-web/src/middleware/tenant.rs:** 7 tests (parse_session_cookie ×3, resolve_session ×2, resolve_user_roles_and_permissions ×2)
+- **rustem-db/src/connection.rs:** 4 tests para `DbResponse::take` (mock data, index out of bounds, empty mock, MigrationRunner)
+- **rustem-db/src/store.rs:** 5 tests para `params_to_value` (converts pairs, empty object) y `tenant_context` (case sensitivity for permission and role)
+
+### Refactor de Arquitectura
+- `rustem-db/src/store.rs`: `SurrealStoreImpl.conn` cambiado de `SurrealConnection` a `Arc<dyn DbConnection>`
+- `rustem-web/src/state.rs`: `AppState.db` cambiado de `Option<Arc<RwLock<SurrealConnection>>>` a `Option<Arc<RwLock<Arc<dyn DbConnection>>>>`
+- `rustem-web/src/handlers.rs`: `get_store` usa `Arc<dyn DbConnection>`
+- `rustem-web/src/middleware/tenant.rs`: `resolve_session` y `resolve_user_roles_and_permissions` usan `&dyn DbConnection`
+
+### Próximas acciones para llegar al 85% de cobertura
+1. Agregar más tests para `rustem-web/src/handlers.rs` (cobertura actual: ~40% líneas)
+2. Agregar tests para `rustem-web/src/main.rs` (cobertura actual: ~42% líneas)
+3. Agregar tests para `rustem-web/src/middleware/tenant.rs` (cobertura actual: ~72% líneas)
+4. Agregar tests para `rustem-db/src/connection.rs` (cobertura actual: ~49% líneas)
+5. Agregar tests para `rustem-db/src/store.rs` (cobertura actual: ~71% líneas)
+6. Agregar tests para `rustem-web/src/middleware/rate_limit.rs` (cobertura actual: ~87% líneas)
+
+---
 
 **Architecture:** Cargo Workspace multi-crate en Rust (edición 2024). Backend Axum + Tokio, frontend Leptos SSR puro (cero JS), base de datos SurrealDB vía SDK oficial 100% Rust. Despliegue con Podman estándar (no rootless). Cada tarea modifica un archivo específico y termina con tests verdes y commit independiente.
 
