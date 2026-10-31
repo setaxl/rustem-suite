@@ -168,6 +168,57 @@ rustem-suite/
 
 > **Criterios de aceptación (arquitectura):** `cargo clippy -- -D warnings` termina en verde en todo el workspace, `cargo test tenancy::isolation` demuestra que el tenant A no lee datos del tenant B, y `cargo test web::zero_js_guard` mantiene el cero JavaScript.
 
+## 7. Decisiones de arquitectura (ADR)
+
+Los registros de decisión (ADRs) documentan las opciones tomadas; cada uno registra estado, contexto, decisión, consecuencias y enlaces.
+
+- **ADR-001: SurrealDB sobre PostgreSQL.**
+  - Estado: aceptada.
+  - Contexto: el modelo requiere grafo (auditoría, trazabilidad, RBAC) combinado con esquema flexible y transacciones ACID.
+  - Decisión: SurrealDB 3.x standalone. Aportes: `RELATE` nativo, `SCHEMAFULL` opcional, transacciones ACID y SDK Rust oficial.
+  - Consecuencias: curva de aprendizaje y comunidad más pequeña que PostgreSQL; se mitiga con pruebas exhaustivas.
+  - Enlaces: documentación en `surrealdb.com/docs`.
+- **ADR-002: Leptos SSR puro.**
+  - Estado: aceptada.
+  - Contexto: la restricción funcional excluye JavaScript en el cliente (seguridad, SEO y rendimiento).
+  - Decisión: Leptos en modo SSR puro, sin `HydrationScripts`; el HTML sale directo del servidor.
+  - Consecuencias: sin interactividad del lado del cliente; se compensa con HTML semántico (`<details>`, `<dialog>`, formularios PRG) y CSS reactivo (`:checked`, `:target`, `prefers-color-scheme`).
+- **ADR-003: Fedora Rawhide + Podman standard.**
+  - Estado: aceptada.
+  - Contexto: el motor de contenedores sin demonio reduce la superficie de ataque, y Fedora entrega paquetes upstream recientes con compatibilidad Rust.
+  - Decisión: Fedora Rawhide como SO base y **Podman standard** para contenedores (Docker excluido).
+  - Consecuencias: la rolling release exige pruebas frecuentes; el CI cubre Fedora estable y Rawhide.
+- **ADR-004: Rust 100% puro, cero C/C++.**
+  - Estado: aceptada.
+  - Contexto: la seguridad de la cadena de suministro, la auditoría y la preparación para WebAssembly piden el fin de los bindings en C.
+  - Decisión: solo crates 100% Rust (`rustls`, `ring`, RustCrypto, `rust-embed`); el sistema excluye OpenSSL, `libsqlite3` y `zlib` nativo.
+  - Consecuencias: algunas crates tienen menos madurez; `cargo audit` y la revisión manual de dependencias críticas la compensan.
+- **ADR-005: dinero en `i64` + `rust_decimal`.**
+  - Estado: aceptada.
+  - Contexto: la precisión monetaria de la NIC 21 y del VEN-NIF excluye los flotantes `f32` y `f64` para dinero.
+  - Decisión: `Money` usa `i64` en centavos más el código de moneda ISO 4217; tasas, impuestos y porcentajes usan `rust_decimal`.
+  - Consecuencias: los valores extremos pueden desbordar; la aritmética verificada (checked) y los límites del dominio lo controlan.
+- **ADR-006: multi-tenancy con `tenant_id` inyectado por middleware.**
+  - Estado: aceptada.
+  - Contexto: el aislamiento total de datos por empresa es un requisito legal y de seguridad.
+  - Decisión: el middleware de Axum extrae el `tenant_id` de la sesión y `erp-db` lo inyecta en todas las consultas.
+  - Consecuencias: la complejidad de las consultas compuestas crece; el wrapper de `erp-db` y las pruebas de integración multi-tenant la controlan.
+- **ADR-007: tasas BCV híbridas (decide la DEC-001).**
+  - Estado: aceptada.
+  - Contexto: la facturación y la valoración requieren la tasa oficial del BCV del día, y el sitio del BCV carece de API oficial.
+  - Decisión: el job programado (tokio-cron diario a las 10:00) consume el sitio del BCV; el administrador corrige manualmente (override), el sistema alerta si la carga falla y audita cada cambio (quién, cuándo, valor anterior y nuevo).
+  - Consecuencias: la disponibilidad del sitio del BCV condiciona la obtención automática; la última tasa válida, la alerta y la corrección manual la respaldan.
+- **ADR-008: facturación dual (decide la DEC-002).**
+  - Estado: aceptada.
+  - Contexto: el formato impreso cumple la Providencia SNAT/2011/00071 hoy, y los proveedores autorizados de imprenta digital esperan archivos estructurados.
+  - Decisión: el HTML imprimible (CSS `@media print`) es el requisito vigente, y la exportación JSON/UBL 2.1 queda configurable por tenant (FacturaYa, Sovos).
+  - Consecuencias: el mantenimiento doble de las plantillas introduce duplicados; un motor de plantillas compartido (`askama` o `tera`) lo mitiga.
+- **ADR-009: reexpresión por inflación híbrida (decide la DEC-003).**
+  - Estado: aceptada.
+  - Contexto: la hiperinflación venezolana exige reexpresión de estados financieros (NIC 29 / BA VEN-NIF 7), y el dato crítico (INPC) requiere control humano.
+  - Decisión: el administrador carga el INPC mensual con validación, y el motor automático calcula coeficientes, clasificación monetaria, ajuste de patrimonio, resultado por posición monetaria y revelaciones en las notas.
+  - Consecuencias: el algoritmo exige exactitud; las pruebas de propiedad con `proptest` y los casos de referencia lo verifican.
+
 ## 22. Estrategia de pruebas
 
 La estrategia de pruebas protege los invariantes del negocio; cada capa verifica un aspecto distinto del sistema.

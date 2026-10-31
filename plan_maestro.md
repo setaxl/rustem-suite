@@ -199,3 +199,17 @@ Estas notas de revisión guían el uso de SurrealDB para ajustar la implementaci
 - **Transacciones ACID:** los bloques `BEGIN TRANSACTION` y `COMMIT TRANSACTION` garantizan la atomicidad de las escrituras en múltiples tablas (asientos contables, balances e inventario).
 - **Uso del grafo (`RELATE`):** el sistema emplea el grafo para trazar la auditoría (`user->EXECUTED->audit_log`) y la trazabilidad de productos (`warehouse->HAS_STOCK->product`), y mantiene las consultas de contabilidad en estructuras tabulares `SCHEMAFULL` con índices para la máxima velocidad.
 - **Consultas parametrizadas:** el código de `erp-db` usa los bindings del SDK oficial de Rust para impedir la inyección de SurQL.
+
+## 6. Decisiones de arquitectura (ADRs)
+
+Los nueve ADRs registran las decisiones duraderas del sistema; el detalle completo vive en la sección 7 de `especificaciones.md` y aquí se listan resumidos para la trazabilidad del backlog.
+
+- **ADR-001: SurrealDB sobre PostgreSQL.** Grafo con `RELATE`, esquema flexible y transacciones ACID; la curva de aprendizaje se mitiga con pruebas exhaustivas.
+- **ADR-002: Leptos SSR puro sobre WebAssembly o SPA.** Cero JavaScript en el cliente, CSP sin `unsafe-inline`, SEO y conservación de la interactividad con HTML semántico y CSS.
+- **ADR-003: Fedora Rawhide + Podman standard.** Motor de contenedores sin demonio y paquetes upstream; la rolling release exige pruebas frecuentes (CI en Fedora estable y Rawhide). Docker queda excluido.
+- **ADR-004: Rust 100% puro, sin C/C++.** Solo crates 100% Rust (`rustls`, `ring`, RustCrypto, `rust-embed`); el sistema excluye OpenSSL, `libsqlite3` y `zlib` nativo.
+- **ADR-005: `i64` en centavos + `rust_decimal`.** Precisión monetaria (NIC 21 y VEN-NIF) con aritmética verificada ante desbordes.
+- **ADR-006: multi-tenancy con `tenant_id` inyectado por middleware.** Aislamiento garantizado por el wrapper de `erp-db` y pruebas de integración.
+- **ADR-007: tasas BCV híbridas (automática, corrección manual, alertas).** Decide la DEC-001.
+- **ADR-008: facturación dual (HTML imprimible + JSON/UBL configurable por tenant).** Decide la DEC-002.
+- **ADR-009: reexpresión de inflación híbrida (INPC manual + motor automático NIC 29).** Decide la DEC-003.
