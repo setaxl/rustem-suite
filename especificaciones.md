@@ -19,7 +19,7 @@ Antes de escribir el primer crate (paquete de Rust) fijas quién construye el si
 - Orquestas contenedores efímeros y pruebas con **Podman standard** (motor de contenedores sin demonio, ejecución estándar). Docker queda excluido del proyecto.
 - Gestionas la infraestructura auxiliar (ejecutable `surrealdb`, Geckodriver y Firefox para pruebas extremo a extremo (E2E)) con herramientas nativas de Fedora (`dnf`, `podman`).
 
-> **Criterio de aceptación (entorno):** `podman info` funciona en Fedora Rawhide sin demonio externo, el repositorio solo contiene `Podmanfile` (cero `Dockerfile`) y `grep -ri "rootless" plan_maestro.md` devuelve 0 resultados.
+> **Criterio de aceptación (entorno):** `podman info` funciona en Fedora Rawhide sin demonio externo, el repositorio solo contiene `Podmanfile` (cero `Dockerfile`) y el proyecto no adopta variantes de ejecución distintas del estándar de Podman.
 
 ## 2. Objetivo del sistema
 
@@ -84,12 +84,12 @@ El stack materializa las decisiones de arquitectura registradas en los ADR-002, 
 - **Lenguaje:** Rust 1.99+ con edición 2024 en todo el workspace.
 - **Servidor de aplicaciones:** `Axum` 0.8+ sobre Tokio, con middleware `tower` y `tower-http` para el enrutamiento.
 - **Frontend:** Leptos versión estable 2026 en SSR puro (sin WebAssembly ni hidratación en el cliente).
-- **Base de datos:** SurrealDB 3.x en modo independiente (standalone), siempre consumida por el SDK oficial (`surrealdb`).
+- **Base de datos:** SurrealDB 3.x en modo independiente (standalone), siempre consumida por el kit de desarrollo de software (SDK: software development kit) oficial (`surrealdb`).
 
 El acceso a SurrealDB cumple estas reglas:
 
 - Esquema `SCHEMAFULL` con `DEFINE TABLE`, `DEFINE FIELD` y `DEFINE INDEX`.
-- Migraciones `.surql` versionadas, aplicadas de manera idempotente al arrancar el sistema.
+- Migraciones en SurrealQL (`.surql`, el lenguaje de consulta de SurrealDB), versionadas y aplicadas de manera idempotente al arrancar el sistema.
 - Modelado de grafo con `RELATE` donde aplica: auditoría, trazabilidad de movimientos de inventario y matriz de control de acceso basado en roles (RBAC).
 - Transacciones con propiedades ACID (atomicidad, consistencia, aislamiento y durabilidad) para asientos contables y kardex de inventario (registro cronológico por producto).
 - 100% de consultas parametrizadas con los bindings del SDK; el código nunca interpola cadenas directamente.
@@ -112,7 +112,7 @@ El acceso a SurrealDB cumple estas reglas:
 
 - **Los montos usan `i64` en unidades menores (centavos de VES o USD, con código ISO 4217) y el dominio excluye `f64` y `f32` para dinero** (ver ADR-005).
 - Tasas, impuestos y porcentajes se representan con `rust_decimal` (aritmética decimal exacta).
-- `chrono` para fechas y horas: almacenamiento global en UTC en la base de datos y conversión a la zona `America/Caracas` en la capa de presentación.
+- `chrono` para fechas y horas: almacenamiento global en el tiempo universal coordinado (UTC) en la base de datos y conversión a la zona `America/Caracas` en la capa de presentación.
 
 ### 5.5 Soporte auxiliar
 
@@ -147,13 +147,13 @@ rustem-suite/
 │   ├── erp-core/        # Tipos de dominio compartidos, Money, RIF, errores
 │   ├── erp-auth/        # Autenticación, Argon2id, sesiones y tokens
 │   ├── erp-admin/       # Tenancy, roles, permisos (RBAC), usuarios y empresas
-│   ├── erp-db/          # Único punto de contacto con SurrealDB + migraciones .surql
+│   ├── erp-db/          # Único acceso a SurrealDB y migraciones .surql
 │   ├── erp-inventory/   # Inventario, productos, almacenes, FIFO y AVCO, kardex
-│   ├── erp-sales/       # Ventas, cotizaciones, pedidos, facturas SENIAT, IGTF, CxC
-│   ├── erp-purchasing/  # Compras, órdenes, recepciones, facturas de proveedor, CxP
-│   ├── erp-accounting/  # Plan de cuentas, asientos, libro mayor, reexpresión NIC 29
-│   ├── erp-frontend/    # Componentes y vistas Leptos (SSR puro)
-│   └── erp-web/         # Servidor Axum: rutas, handlers, middlewares y estáticos
+│   ├── erp-sales/       # Ventas, pedidos, facturas SENIAT e IGTF, CxC
+│   ├── erp-purchasing/  # Compras, órdenes, recepciones y CxP
+│   ├── erp-accounting/  # Plan de cuentas, asientos y reexpresión NIC 29
+│   ├── erp-frontend/    # Vistas y componentes Leptos SSR
+│   └── erp-web/         # Servidor Axum: rutas, handlers y middlewares
 ├── static/              # CSS base, tokens de diseño, fuentes e imágenes
 ├── templates/           # Plantillas askama de la factura imprimible
 └── Podmanfile           # Contenedor de producción construido en Fedora
@@ -177,7 +177,7 @@ Los registros de decisión (ADRs) documentan las opciones tomadas; cada uno regi
   - Contexto: el modelo requiere grafo (auditoría, trazabilidad, RBAC) combinado con esquema flexible y transacciones ACID.
   - Decisión: SurrealDB 3.x standalone. Aportes: `RELATE` nativo, `SCHEMAFULL` opcional, transacciones ACID y SDK Rust oficial.
   - Consecuencias: curva de aprendizaje y comunidad más pequeña que PostgreSQL; las pruebas exhaustivas la mitigan.
-  - Enlaces: documentación en `surrealdb.com/docs`.
+  - Enlaces: [documentación de SurrealDB](https://surrealdb.com/docs).
 - **ADR-002: Leptos SSR puro.**
   - Estado: aceptada.
   - Contexto: la restricción funcional excluye JavaScript en el cliente (seguridad, SEO y rendimiento).
@@ -187,7 +187,7 @@ Los registros de decisión (ADRs) documentan las opciones tomadas; cada uno regi
   - Estado: aceptada.
   - Contexto: el motor de contenedores sin demonio reduce la superficie de ataque, y Fedora entrega paquetes upstream recientes con compatibilidad Rust.
   - Decisión: Fedora Rawhide como SO base y **Podman standard** para contenedores (Docker excluido).
-  - Consecuencias: la rolling release exige pruebas frecuentes; el CI cubre Fedora estable y Rawhide.
+  - Consecuencias: la rolling release exige pruebas frecuentes; la integración continua (CI) cubre Fedora estable y Rawhide.
 - **ADR-004: Rust 100% puro, cero C/C++.**
   - Estado: aceptada.
   - Contexto: la seguridad de la cadena de suministro, la auditoría y la preparación para WebAssembly piden el fin de los bindings en C.
@@ -240,7 +240,7 @@ La tabla siguiente consolida las decisiones de alcance adoptadas para CxC.
 
 Las entidades del sub-ledger de clientes residen en `erp-core` y se materializan en migraciones `SCHEMAFULL`:
 
-- `Customer` (cliente): RIF, razón social, condiciones de pago por defecto, límite de crédito y estatus (activo, bloqueado o moroso).
+- `Customer` (cliente): RIF o identificador fiscal extranjero (`tax_id`), razón social, condiciones de pago por defecto, límite de crédito y estatus (activo, bloqueado o moroso).
 - `PaymentTerm` (condición de pago): tipo (contado, crédito o cuotas), días, descuento por pronto pago, interés moratorio y plan de cuotas opcional.
 - `Invoice` (factura): extiende la factura de Fase 4 con `balance_pendiente`, `payment_term_id`, `fecha_vencimiento` y `status_cxc` (pendiente, parcial, pago, vencido o anulado).
 - `Payment` (pago): tenant, cliente, fecha, monto total, moneda, tasa de cambio, método, referencia bancaria y estado (borrador, confirmado, conciliado o anulado).
@@ -256,7 +256,7 @@ Las entidades del sub-ledger de clientes residen en `erp-core` y se materializan
 **Fase 4 (módulo de ventas):**
 
 - Modelo de datos en `erp-core` y migraciones con grafos `RELATE customer->HAS_INVOICE->invoice` y `invoice->HAS_PAYMENT->payment`.
-- Registro de pagos multi-método con aplicación automática o manual a facturas (FIFO por vencimiento más prioridad manual).
+- Registro de pagos multi-método con aplicación automática o manual a las facturas en orden FIFO (primeras entradas, primeras salidas) por vencimiento, más prioridad manual.
 - Condiciones de pago por cliente (heredadas del valor por defecto y sobrescribibles por factura), descuento por pronto pago e interés moratorio automático.
 - Planes de cuotas fijas y personalizadas con generación y reprogramación automáticas.
 - Importación de extractos bancarios (CSV o Excel) con matching sugerido por monto, fecha y referencia, más confirmación manual.
@@ -282,7 +282,7 @@ Los ejemplos de este módulo viven en el apéndice de ejemplos (sección 24), ya
 
 ### 8.6 Términos del módulo
 
-El glosario (sección 25.3) define: aging, pronto pago, interés moratorio, conciliación bancaria, sub-ledger, provisión de cobros dudosos y factoring.
+El glosario (sección 25.3) define: aging, pronto pago, interés moratorio, plan de cuotas, diferencia de cambio, conciliación bancaria, sub-ledger, provisión de cobros dudosos y factoring.
 
 ## 9. Cuentas por pagar (CxP)
 
@@ -306,7 +306,7 @@ La tabla consolida las decisiones de alcance adoptadas para CxP.
 
 Las entidades del sub-ledger de proveedores residen en `erp-core` y se materializan en migraciones `SCHEMAFULL`:
 
-- `Supplier` (proveedor): RIF, razón social, condiciones de pago por defecto, cuenta contable por defecto y retenciones aplicables (IVA, ISLR, IGTF).
+- `Supplier` (proveedor): RIF o identificador fiscal extranjero (`tax_id`), razón social, condiciones de pago por defecto, cuenta contable por defecto y retenciones aplicables (IVA, ISLR, IGTF).
 - `PurchaseOrder` (orden de compra): proveedor, fecha, líneas (producto, cantidad, precio e IVA) y estado (borrador, enviada, parcial, recibida, facturada o cerrada).
 - `GoodsReceipt` (recepción de mercancía): orden, fecha, almacén, líneas con cantidad real, lote y vencimiento, y estado.
 - `SupplierInvoice` (factura de proveedor): orden o recepción de origen, proveedor, fecha, vencimiento, número de control fiscal, líneas, IVA, retenciones y `status_cxp` (pendiente, parcial, pago, vencido, anulado o disputado).
@@ -445,7 +445,7 @@ El módulo de presupuestos compara el plan aprobado contra la ejecución real y 
 
 - Carga del presupuesto de forma manual o por importación de Excel con plantilla.
 - Ejecución automática mensual desde la contabilidad, más el comprometido desde órdenes y pedidos.
-- Alertas automáticas por umbral con notificación de ello a los responsables (enlace a la sección 18, notificaciones).
+- Alertas automáticas por umbral, con notificación de la alerta a los responsables por la sección 18 (notificaciones).
 - Reportes: presupuesto contra real (variación en monto y porcentaje), tendencia mensual, alertas activas y proyección del cierre.
 
 ### 12.4 Criterios de aceptación
@@ -534,7 +534,7 @@ El CRM amplía el cliente básico de la Fase 4 con el ciclo comercial completo; 
 - Oportunidades con etapas del embudo (nueva, calificada, propuesta, negociación, cerrada ganada o cerrada perdida), monto estimado, probabilidad, fecha de cierre estimada y competidor.
 - Actividades de venta: llamadas, reuniones, correos, tareas y recordatorios, con resultado y próxima acción.
 - Versiones de cotización por oportunidad con comparación, historial y conversión a pedido.
-- Campañas de mercadeo con segmentación de clientes y registro de respuesta.
+- Campañas de mercadeo con segmentación de clientes, envío masivo por correo o SMS vía la sección 18, y registro de la respuesta.
 - Territorios y equipos de venta con metas por vendedor y por equipo.
 
 ### 16.2 Modelo de datos
@@ -598,8 +598,8 @@ El BI convierte el dato operativo en decisión gerencial; los reportes aplican s
 
 - Ventas: por vendedor, producto, cliente, canal y región, con tendencia y ticket promedio.
 - Cobranza y pagos: aging, días promedio de cobro (DSO: days sales outstanding) y de pago (DPO: days payables outstanding), concentración de riesgo en los 10 mayores y efectividad de cobranza.
-- Inventario: rotación, antigüedad del stock, rupturas de stock, valoración FIFO y AVCO, y análisis ABC.
-- Financieros: flujo de caja, márgenes por línea, punto de equilibrio y comparativo del presupuesto (sección 12).
+- Inventario: rotación, antigüedad del stock, rupturas de stock, valoración FIFO y AVCO (costo promedio ponderado), y análisis ABC.
+- Financieros: flujo de caja, EBITDA (ganancia antes de intereses, impuestos, depreciación y amortización), apalancamiento, márgenes por línea, punto de equilibrio y comparativo del presupuesto (sección 12).
 - Fiscales: IVA de compras y ventas, retenciones, IGTF y libros fiscales del SENIAT.
 
 Los reportes consumen las vistas analíticas de la base y respetan el acuerdo de servicio (SLA: service level agreement) de la sección 21.6.
@@ -613,11 +613,11 @@ El MVP (producto mínimo viable) excluye dos dominios por decisión de producto;
 
 ## 21. Aspectos transversales
 
-Las reglas de esta sección aplican a todos los módulos a la vez; los criterios de rendimiento (p95) complementan el objetivo general de la sección 22.
+Las reglas de esta sección aplican a todos los módulos a la vez; los criterios de rendimiento en el percentil 95 (p95) complementan el objetivo general de la sección 22.
 
 ### 21.1 Cifrado por entidad
 
-- Cifras en reposo con `aes-gcm` o `chacha20poly1305` los campos sensibles: usuario (hash de contraseña, correo y teléfono), cliente y proveedor (RIF y número de cuenta bancaria), cuenta bancaria (número de cuenta, clave SWIFT y token de la API del banco), pagos (referencia bancaria y token de tarjeta), claves de API (hash de la clave y secreto de firma del webhook), configuración fiscal (credenciales del proveedor de facturación) y `audit_log` (payload con datos personales).
+- Cifras en reposo con `aes-gcm` o `chacha20poly1305` los campos sensibles: usuario (hash de contraseña, correo y teléfono), cliente y proveedor (RIF o identificador fiscal extranjero y número de cuenta bancaria), cuenta bancaria (número de cuenta, clave SWIFT y token de la API del banco), pagos (referencia bancaria y token de tarjeta), claves de API (hash de la clave y secreto de firma del webhook), configuración fiscal (credenciales del proveedor de facturación) y `audit_log` (payload con datos personales).
 - La limpieza de memoria (`zeroize`) protege las claves en uso, y ningún secreto llega al disco sin cifrar.
 
 ### 21.2 Auditoría de negocio
@@ -657,8 +657,8 @@ La tabla fija el objetivo de latencia p95 y el rendimiento objetivo de cada mód
 | Facturación | 800 ms | 50 solicitudes por segundo | Incluye la plantilla de impresión |
 | Paneles de CxC y CxP | 300 ms | 200 solicitudes por segundo | Cache del aging de 5 minutos |
 | Asientos contables | 200 ms | 500 solicitudes por segundo | Inserciones por lote |
-| Reportes gerenciales | 2 s | 10 solicitudes por segundo | Transmisión de CSV en flujo (streaming) |
-| Importación de CSV | 30 s por 10.000 filas | 5 trabajos concurrentes | Trabajo en segundo plano |
+| Reportes gerenciales | 2s | 10 solicitudes por segundo | Transmisión de CSV en flujo (streaming) |
+| Importación de CSV | 30s por 10.000 filas | 5 trabajos concurrentes | Trabajo en segundo plano |
 
 ### 21.7 Capacidad y escalabilidad
 
@@ -781,7 +781,11 @@ members = [
     "crates/erp-frontend",
     "crates/erp-web",
 ]
+```
 
+La sección `[workspace.dependencies]` centraliza las versiones compartidas de las dependencias, y el perfil de release activa la optimización del tiempo de enlace (LTO: link time optimization) ligera del binario final.
+
+```toml
 [workspace.package]
 edition = "2024"
 rust-version = "1.99"
@@ -888,14 +892,19 @@ pub struct Money {
     pub centavos: i64,
     pub moneda: Moneda,
 }
+```
 
+El tipo calcula en la unidad menor del ADR-005: la conversión valida el desborde con `i64_checked`, y la suma rechaza de antemano las monedas distintas.
+
+```rust
 impl Money {
     pub fn nuevo(centavos: i64, moneda: Moneda) -> Self {
         Self { centavos, moneda }
     }
 
     pub fn desde_unidades(unidades: Decimal, moneda: Moneda) -> Option<Self> {
-        Some(Self::nuevo((unidades * Decimal::from(100)).i64_checked()?, moneda))
+        let centavos = (unidades * Decimal::from(100)).i64_checked()?;
+        Some(Self::nuevo(centavos, moneda))
     }
 
     pub fn unidades(self) -> Decimal {
@@ -948,9 +957,10 @@ DEFINE INDEX bcv_fecha ON TABLE bcv_rate COLUMNS fecha UNIQUE;
 use rust_decimal::Decimal;
 
 pub fn extrae_tasa_dolar(html: &str) -> anyhow::Result<Decimal> {
-    // El sitio del BCV publica la venta del USD en un bloque de texto con coma decimal
+    // El sitio del BCV publica la tasa del USD en texto con coma decimal
     let fragmento = scraper::Html::parse_document(html);
-    let sel = scraper::Selector::parse("div.col-sm-6.field-content div").unwrap();
+    let sel = scraper::Selector::parse("div.col-sm-6.field-content div")
+        .unwrap();
     let texto = fragmento
         .select(&sel)
         .map(|el| el.text().collect::<String>())
@@ -1041,9 +1051,16 @@ pub fn coeficiente(inpc_cierre: Decimal, inpc_origen: Decimal) -> Decimal {
     // El INPC de origen mayor que cero se valida al cargar el índice
     inpc_cierre / inpc_origen
 }
+```
 
+La clasificación aplica los rangos del plan de cuentas: los prefijos `11`, `12` y `21` son monetarios; el motor reexpresa el resto.
+
+```rust
 pub fn clasifica(cuenta: &str) -> Clasificacion {
-    if cuenta.starts_with("11") || cuenta.starts_with("12") || cuenta.starts_with("21") {
+    let monetaria = ["11", "12", "21"]
+        .iter()
+        .any(|prefijo| cuenta.starts_with(prefijo));
+    if monetaria {
         Clasificacion::Monetaria
     } else {
         Clasificacion::NoMonetaria
@@ -1122,8 +1139,13 @@ DEFINE FIELD payment_id ON TABLE payment_allocation TYPE record;
 DEFINE FIELD invoice_id ON TABLE payment_allocation TYPE record;
 DEFINE FIELD monto_aplicado ON TABLE payment_allocation TYPE number;
 DEFINE FIELD fecha ON TABLE payment_allocation TYPE datetime;
-DEFINE INDEX alloc_pago ON TABLE payment_allocation COLUMNS payment_id, invoice_id;
+DEFINE INDEX alloc_pago ON TABLE payment_allocation
+    COLUMNS payment_id, invoice_id;
+```
 
+El archivo continúa con el plan de cuotas, ordenado por plan y número, y con las dos relaciones del grafo de trazabilidad.
+
+```sql
 DEFINE TABLE installment SCHEMAFULL;
 DEFINE FIELD plan_id ON TABLE installment TYPE record;
 DEFINE FIELD numero ON TABLE installment TYPE int;
@@ -1139,15 +1161,24 @@ DEFINE TABLE HAS_PAYMENT TYPE RELATION IN invoice OUT payment ENFORCED;
 **`crates/erp-sales/src/cxc/payment_service.rs`:** aplicación FIFO de pagos (CXC-02).
 
 ```rust
-pub fn aplica_pago_fifo(pago: &erp_core::money::Money, deudas: &mut Vec<DeudaCliente>) -> erp_core::money::Money {
+pub fn aplica_pago_fifo(
+    pago: &erp_core::money::Money,
+    deudas: &mut Vec<DeudaCliente>,
+) -> erp_core::money::Money {
     let mut restante = *pago;
     deudas.sort_by_key(|d| d.vence);
     for deuda in deudas.iter_mut() {
         if restante.centavos == 0 { break; }
         if restante.moneda != deuda.saldo.moneda { continue; }
         let monto = restante.centavos.min(deuda.saldo.centavos);
-        deuda.saldo = erp_core::money::Money::nuevo(deuda.saldo.centavos - monto, restante.moneda);
-        restante = erp_core::money::Money::nuevo(restante.centavos - monto, restante.moneda);
+        deuda.saldo = erp_core::money::Money::nuevo(
+            deuda.saldo.centavos - monto,
+            restante.moneda,
+        );
+        restante = erp_core::money::Money::nuevo(
+            restante.centavos - monto,
+            restante.moneda,
+        );
     }
     // Devuelves el residuo no aplicado
     restante
@@ -1177,14 +1208,24 @@ pub fn asiento_pago(monto: Money) -> Vec<Linea> {
         Linea::credito(Cuenta::CxC, monto),
     ]
 }
+```
 
+La diferencia de cambio intercambia el débito y el crédito según el signo, con la cuenta `5115` conforme a la NIC 21.
+
+```rust
 pub fn asiento_dif_cambio(dif: Money) -> Vec<Linea> {
     // D/C 5115 contra 1105 conforme a la NIC 21
     let monto = Money::nuevo(dif.centavos.abs(), dif.moneda);
     if dif.centavos >= 0 {
-        vec![Linea::debito(Cuenta::DifCambio, monto), Linea::credito(Cuenta::CxC, monto)]
+        vec![
+            Linea::debito(Cuenta::DifCambio, monto),
+            Linea::credito(Cuenta::CxC, monto),
+        ]
     } else {
-        vec![Linea::debito(Cuenta::CxC, monto), Linea::credito(Cuenta::DifCambio, monto)]
+        vec![
+            Linea::debito(Cuenta::CxC, monto),
+            Linea::credito(Cuenta::DifCambio, monto),
+        ]
     }
 }
 ```
@@ -1226,7 +1267,7 @@ Los 20 archivos responden a la estructura de la sección 6.1, y los comandos `ca
 
 ## 25. Glosario fiscal y contable
 
-El glosario reúne 34 entradas sobre la normativa venezolana e internacional aplicada al ERP; cada una trae definición, referencia legal y su uso dentro del sistema. Sirve a las dos audiencias: quién programa y quién audita.
+El glosario reúne 38 entradas sobre la normativa venezolana e internacional aplicada al ERP; cada una trae definición, referencia legal y su uso dentro del sistema. Sirve a las dos audiencias: quién programa y quién audita.
 
 ### 25.1 Marco tributario del SENIAT
 
@@ -1239,6 +1280,7 @@ El glosario reúne 34 entradas sobre la normativa venezolana e internacional apl
 | RIF | Registro Único de Información Fiscal: identificador tributario con prefijos `V-`, `J-`, `G-`, `E-` y `P-` | Norma G2000 del SENIAT | Validación de clientes y proveedores y datos del emisor en la factura |
 | Número de control | Correlativo fiscal de cada documento emitido, con serie y formato de control | Providencia SNAT/2011/00071 del SENIAT | Numeración y vista de factura (secciones 3.2 y 4) |
 | Comprobante de retención | Documento que formaliza la retención de IVA o ISLR, con correlativo anual o mensual | RG 18 y providencias del SENIAT | Generación en CxP (sección 9.3) |
+| Factura electrónica e imprenta digital | Esquema técnico (UBL 2.1) para la transmisión de la factura al SENIAT por un proveedor autorizado, complementaria del formato impreso | Normativa del SENIAT y proveedores autorizados | Exportación JSON/UBL configurable por tenant (sección 3.2) |
 
 ### 25.2 Marco contable y tasas del BCV
 
@@ -1255,7 +1297,8 @@ El glosario reúne 34 entradas sobre la normativa venezolana e internacional apl
 | INPC | Índice Nacional de Precios al Consumidor, publicado mensualmente por el BCV | Publicaciones del BCV | Carga mensual y coeficientes del motor (sección 3.3) |
 | Reexpresión | Ajuste de saldos a moneda de poder adquisitivo constante, con coeficientes del INPC | NIC 29 y BA VEN-NIF 7 | Motor automático (secciones 3.3 y 24.4) |
 | Cuenta monetaria / no monetaria | Clasificación NIC 29: los saldos monetarios (efectivo, bancos, cartera) no se reexpresan y los no monetarios (inventario, inmuebles, patrimonio) sí | NIC 29 | Clasificación y ajuste en el motor (sección 3.3) |
-| Resultado por posición monetaria | Ganancia o pérdida del poder adquisitivo de la reexpresión, reconocida en el estado de resultados | NIC 29 | Línea de PyG y revelación en notas (sección 3.3) |
+| Resultado por posición monetaria | Ganancia o pérdida del poder adquisitivo de la reexpresión, reconocida en la línea del estado de resultados y en las notas | NIC 29 | Asiento del cierre (sección 3.3) |
+| Ganancia o pérdida del poder adquisitivo | El efecto total de la reexpresión NIC 29: la diferencia entre el ajuste de las cuentas no monetarias y el ajuste del patrimonio | NIC 29 y BA VEN-NIF 7 | Cálculo del motor y asiento de reexpresión (secciones 3.3 y 24.4) |
 
 ### 25.3 Cuentas por cobrar y cobranza
 
@@ -1265,6 +1308,8 @@ El glosario reúne 34 entradas sobre la normativa venezolana e internacional apl
 | Aging | Antigüedad de los saldos vencidos, en buckets de 0 a 30, 31 a 60, 61 a 90 y más de 90 días | Práctica comercial | Dashboard y provisión (sección 8) |
 | Pronto pago | Descuento al cliente que paga antes del vencimiento | Condición comercial pactada | Asiento 5110 del descuento (sección 8.3) |
 | Interés moratorio | Cargo adicional por pago pactado y aún en mora | Código de Comercio venezolano | Asiento 4210 (sección 8.3) |
+| Plan de cuotas | Financiamiento de una factura en cuotas pactadas, con capital, interés y reprogramación | Condición comercial pactada | Generación y reprogramación automáticas de cuotas (sección 8) |
+| Diferencia de cambio | Efecto de convertir la moneda de la transacción a la moneda funcional | NIC 21 y BA VEN-NIF 2 | Asiento en la cuenta 5115 (secciones 8.3 y 10) |
 | Conciliación bancaria | Igualación del extracto bancario contra el libro, con ajuste por diferencias | Práctica contable | Módulo de tesorería (sección 10) |
 | Sub-ledger | Libro auxiliar de clientes o proveedores, cuadrado contra la cuenta mayor | Práctica contable | Invariantes CXC-06 y CXP-05 (sección 23) |
 | Provisión de cobros dudosos | Estimación de pérdidas por cartera incobrable, por buckets | NIC 9 y VEN-NIF | Política por bucket y gasto (sección 8) |
@@ -1296,7 +1341,7 @@ El proyecto avanza en fases acumulativas; esta sección resume la ruta y fija la
 1. **Fase 0: plan maestro.** Documento `plan_maestro.md` con el backlog por fases, la definición de hecho (DoD: Definition of Done), la matriz de riesgos y los registros de decisión.
 2. **Fase 1: base e infraestructura core.** Workspace de Cargo, SurrealDB en Podman, migraciones idempotentes, autenticación completa con cookies seguras y SSR, router `Axum` con CSS base y batería de pruebas.
 3. **Fase 2: RBAC, multi-tenancy y auditoría.** Roles y permisos, asociación empresa y usuario, guarda de rutas en Axum, `audit_log` en grafo y limitador de inicio de sesión.
-4. **Fase 3: inventario y valoración VEN-NIF.** Almacenes, productos, movimientos en grafo (`RELATE`), valoración por primeras entradas, primeras salidas (FIFO: First In, First Out) y costo promedio ponderado (AVCO: average cost), y kardex inmutable.
+4. **Fase 3: inventario y valoración VEN-NIF.** Almacenes, productos, movimientos en grafo (`RELATE`), valoración por primeras entradas, primeras salidas (FIFO) y costo promedio ponderado (AVCO), y kardex inmutable.
 5. **Fase 4: ventas, facturación SENIAT, cobranza y pagos.** Clientes, cotizaciones, pedidos, facturas con alícuotas de IVA e IGTF, correlativos de serie, formato impreso con `@media print`, y los flujos completos de cuentas por cobrar (CxC) y cuentas por pagar (CxP) con conciliación bancaria.
 6. **Fase 5: contabilidad doble y bimoneda.** Plan de cuentas venezolano, asientos automáticos y manuales con invariante de partida doble en bimoneda, libro mayor, sumas y saldos, balance general, reexpresión NIC 29, activos fijos, presupuestos, centros de costo y BI.
 7. **Fase 6: endurecimiento y extensibilidad.** Cifrado en reposo, respaldos con restauración validados por Podman, TLS nativo con `rustls`, pruebas de carga, API externa, importaciones, CRM avanzado y notificaciones.

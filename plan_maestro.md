@@ -58,7 +58,7 @@ En esta fase garantizas el aislamiento por empresa (tenant) e implementas la mat
   - Entregable: acceso denegado (HTTP 403 o redirección) para usuarios sin el permiso requerido.
 - **F2-03 (M): registro de auditoría inmutable (`audit_log`).**
   - Aristas de grafo `RELATE user->EXECUTED->audit_log` para toda mutación de estado.
-  - Captura de dirección IP (respetando el proxy), marca UTC, tabla afectada, payload e identificador del tenant.
+  - Captura de dirección IP (respetando el proxy), marca del tiempo universal coordinado (UTC), tabla afectada, payload e identificador del tenant.
   - Entregable: registro automático de auditoría en cada `POST` de la aplicación.
 - **F2-04 (S): rate limiter y protección contra fuerza bruta.**
   - Middleware de Tower en Axum que mitiga ataques de fuerza bruta en `/login` (bloqueo por IP y usuario tras 5 intentos fallidos).
@@ -66,7 +66,7 @@ En esta fase garantizas el aislamiento por empresa (tenant) e implementas la mat
 
 ### Fase 3: inventario, almacenes y kardex (valoración VEN-NIF)
 
-En esta fase gestionas existencias multi-almacén con valoración conforme a la NIC 2 y al VEN-NIF (FIFO y promedio ponderado AVCO).
+En esta fase gestionas existencias multi-almacén con valoración conforme a la NIC 2 y al VEN-NIF, con FIFO (primeras entradas, primeras salidas) y promedio ponderado (AVCO).
 
 - **F3-01 (M): almacenes y registro de productos.**
   - ABM (alta, baja y modificación) de almacenes y productos con unidades de medida, categorías, códigos de barra y alícuotas de IVA aplicables.
@@ -187,7 +187,7 @@ En esta fase construyes el sistema contable en partida doble con reexpresión bi
 
 ### Fase 6: endurecimiento, seguridad en reposo y extensibilidad
 
-En esta fase aseguras el sistema ante auditorías, implementas cifrado defensivo, pruebas de estrés, respaldos y las integraciones externas (API, importaciones, CRM avanzado, notificaciones).
+En esta fase aseguras el sistema ante auditorías, implementas cifrado defensivo, pruebas de estrés, respaldos y las integraciones externas: API, importaciones, gestión de relaciones con clientes (CRM) avanzada y notificaciones.
 
 - **F6-01 (M): cifrado en reposo y gestión de secretos.**
   - Cifrado de campos sensibles (datos bancarios, tokens de integración) con `chacha20poly1305` o `aes-gcm`.
@@ -201,15 +201,15 @@ En esta fase aseguras el sistema ante auditorías, implementas cifrado defensivo
   - Cobertura de 85% o más en módulos de dominio validada con `cargo-llvm-cov`.
   - Pruebas de estrés con `oha` contra los handlers del servidor.
   - Prueba sintáctica automatizada que valida la ausencia total de `<script` y `on*=` en el HTML de salida.
-  - Entregable: reportes de rendimiento con p95 inferior a 200 ms y cero hallazgos en `cargo audit`.
+  - Entregable: reportes de rendimiento con percentil 95 (p95) inferior a 200 ms y cero hallazgos en `cargo audit`.
 - **F6-04 (M): API e integraciones externas.**
   - API REST sobre los recursos principales con CRUD, autenticación OAuth 2.0 y claves por tenant con permisos granulares (scopes).
   - Webhooks por evento con entrega firmada y reintentos, más límite de tasa por clave y endpoint.
-  - Documentación OpenAPI 3.1 con interfaz embebida y generación de SDK (sección 17 de `especificaciones.md`).
+  - Documentación OpenAPI 3.1 con interfaz embebida y generación del kit de desarrollo de software (SDK), conforme a la sección 17 de `especificaciones.md`.
   - Entregable: un tercero integra ventas y pagos con su propia clave de API, sin ver los datos de otro tenant.
 - **F6-05 (M): CRM avanzado y oportunidades.**
   - Prospectos con calificación y asignación, oportunidades con embudo, actividades de venta y versiones de cotización (sección 16 de `especificaciones.md`).
-  - Campañas de mercadeo con segmentación y registro de respuesta, territorios y metas por vendedor.
+  - Campañas de mercadeo con segmentación, envío masivo de correo o SMS, registro de respuesta, territorios y metas por vendedor.
   - Conversión de la oportunidad cerrada ganada a pedido de ventas con trazabilidad completa.
   - Entregable: el vendedor sigue el embudo en el sistema, sin hojas de cálculo.
 - **F6-06 (M): notificaciones y alertas.**
@@ -277,7 +277,7 @@ Estas notas de revisión guían el uso de SurrealDB para ajustar la implementaci
 
 - **Transacciones ACID:** los bloques `BEGIN TRANSACTION` y `COMMIT TRANSACTION` garantizan la atomicidad de las escrituras en múltiples tablas (asientos contables, balances e inventario).
 - **Uso del grafo (`RELATE`):** el sistema emplea el grafo para trazar la auditoría (`user->EXECUTED->audit_log`) y la trazabilidad de productos (`warehouse->HAS_STOCK->product`), y mantiene las consultas de contabilidad en estructuras tabulares `SCHEMAFULL` con índices para la máxima velocidad.
-- **Consultas parametrizadas:** el código de `erp-db` usa los bindings del SDK oficial de Rust para impedir la inyección de SurQL.
+- **Consultas parametrizadas:** el código de `erp-db` usa los bindings del SDK oficial de Rust para impedir la inyección de SurQL (el lenguaje de consulta de SurrealDB).
 
 ## 6. Decisiones de arquitectura (ADRs)
 
@@ -285,7 +285,7 @@ Los nueve ADRs registran las decisiones duraderas del sistema; el detalle comple
 
 - **ADR-001: SurrealDB sobre PostgreSQL.** Grafo con `RELATE`, esquema flexible y transacciones ACID; las pruebas exhaustivas mitigan la curva de aprendizaje.
 - **ADR-002: Leptos SSR puro sobre WebAssembly o SPA.** Cero JavaScript en el cliente, CSP sin `unsafe-inline`, SEO y conservación de la interactividad con HTML semántico y CSS.
-- **ADR-003: Fedora Rawhide + Podman standard.** Motor de contenedores sin demonio y paquetes upstream; la rolling release exige pruebas frecuentes (CI en Fedora estable y Rawhide). Docker queda excluido.
+- **ADR-003: Fedora Rawhide + Podman standard.** Motor de contenedores sin demonio y paquetes upstream; la rolling release exige pruebas frecuentes, con la integración continua (CI) en Fedora estable y Rawhide. Docker queda excluido.
 - **ADR-004: Rust 100% puro, sin C/C++.** Solo crates 100% Rust (`rustls`, `ring`, RustCrypto, `rust-embed`); el sistema excluye OpenSSL, `libsqlite3` y `zlib` nativo.
 - **ADR-005: `i64` en centavos + `rust_decimal`.** Precisión monetaria (NIC 21 y VEN-NIF) con aritmética verificada ante desbordes.
 - **ADR-006: multi-tenancy con `tenant_id` inyectado por middleware.** Aislamiento garantizado por el wrapper de `erp-db` y pruebas de integración.
