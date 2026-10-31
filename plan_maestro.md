@@ -240,6 +240,7 @@ El DoD define los criterios de cierre: el global aplica a todas las fases, y el 
 5. **Sin C/C++:** verificación de que no existan librerías enlazadas dinámicamente mediante C-FFI o `sys-crates` con código C.
 6. **Guardián cero JavaScript:** batería de pruebas HTTP que confirma que el 100% del HTML servido no contiene scripts ni atributos de eventos dinámicos.
 7. **Multi-tenancy:** pruebas de integración que confirman el aislamiento completo por `tenant_id`.
+8. **Criterios de aceptación:** los 37 criterios de la sección 23 de `especificaciones.md` pasan en verde; cada fase cierra con los de sus módulos y el global exige el total.
 
 ### DoD por fase
 

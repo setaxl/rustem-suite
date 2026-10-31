@@ -687,6 +687,77 @@ La estrategia de pruebas protege los invariantes del negocio; cada capa verifica
 5. **E2E (Fantoccini + navegador headless nativo en Fedora):** automatizas los flujos completos: inicio de sesión, creación de empresa, alta de inventario, venta con IGTF e IVA, y chequeo del asiento contable generado.
 6. **Seguridad y rendimiento:** inspeccionas `cargo audit`, sometes el endpoint de inicio de sesión a pruebas de estrés con `oha` y mides con `criterion`; objetivo de p95 por debajo de 200 ms en handlers clave.
 
+## 23. Criterios de aceptación testeables
+
+Los 37 criterios consolidan las decisiones de negocio y los módulos; cada uno pasa o falla y ninguno admite cumplimientos parciales. La definición de hecho (DoD) de `plan_maestro.md` exige el total en verde al cierre.
+
+### 23.1 Tasas del BCV, facturación dual y reexpresión (BCV, INV, INF)
+
+| Código | Prueba | Resultado esperado |
+| :--- | :--- | :--- |
+| BCV-01 | `cargo test bcv::auto_fetch` | El job toma la tasa del BCV del día (36.50 VES/USD contra un servidor de prueba) y la guarda con fuente automática |
+| BCV-02 | `cargo test bcv::manual_override` | El administrador corrige la tasa a 36.55 y la auditoría registra usuario, hora, valor anterior y valor nuevo |
+| BCV-03 | `cargo test bcv::fallback` | Tras 3 días de fallo del sitio del BCV, el sistema usa la última tasa válida y activa la alerta |
+| INV-01 | `cargo test invoice::html_print` | La factura impresa con CSS `@media print` reproduce el modelo del SENIAT |
+| INV-02 | `cargo test invoice::export_json` | La factura exportada en JSON valida el esquema UBL 2.1 (`xmllint --schema`) |
+| INV-03 | `cargo test invoice::tenant_config` | El tenant A genera solo HTML y el tenant B genera HTML más JSON según su configuración |
+| INF-01 | `cargo test inflation::coefficients` | Con INPC 100, 105 y 110 los coeficientes salen 1.00, 1.05 y 1.10 |
+| INF-02 | `cargo test inflation::monetary_classification` | La cuenta `1101` Banco queda monetaria y la `1501` Mercancía queda no monetaria |
+| INF-03 | `cargo test inflation::restatement` | El capital de 1.000.000 VES con INPC 110 se reexpresa en 1.100.000 VES con 100.000 de resultado por posición monetaria |
+| INF-04 | `cargo test inflation::disclosure` | Las notas revelan método, índice base, resultado por posición monetaria y efecto en el patrimonio |
+
+### 23.2 Cuentas por cobrar (CXC)
+
+| Código | Prueba | Resultado esperado |
+| :--- | :--- | :--- |
+| CXC-01 | `cargo test cxc::aging` | El aging de 1.000 facturas mixtas cuadra con la consulta de referencia |
+| CXC-02 | `cargo test cxc::payment_allocation` | Un pago de 5.000 aplicado por FIFO a 3 facturas deja los saldos correctos |
+| CXC-03 | `cargo test cxc::installments` | Las 12 cuotas de 1.000 con interés del 2% arrojan un total de 12.240 y fechas correctas |
+| CXC-04 | `cargo test cxc::bank_import` | Un CSV de 500 líneas produce 480 coincidencias automáticas, 20 sugeridas y 0 errores de lectura |
+| CXC-05 | `cargo test cxc::ven_nif_report` | El libro VEN-NIF sale con las columnas exactas y los totales cuadrados |
+| CXC-06 | `cargo test cxc::subledger_invariance` | El sub-ledger de clientes cuadra con la cuenta `1105` al centavo (enteros `i64`) |
+| CXC-07 | `cargo test cxc::multi_currency` | Una factura de 1.000 USD a 36.50 pagada a 36.55 contabiliza 50 VES de diferencia de cambio |
+
+### 23.3 Cuentas por pagar (CXP)
+
+| Código | Prueba | Resultado esperado |
+| :--- | :--- | :--- |
+| CXP-01 | `cargo test cxp::three_way_matching` | Con orden de 100, recepción de 95 y factura de 95, el faltante de 5 queda pendiente de recepción |
+| CXP-02 | `cargo test cxp::withholding_calc` | La factura de 1.000 con IVA de 160 de un SPE retiene 120 (75%) y el ISLR del 2% retiene 20 |
+| CXP-03 | `cargo test cxp::payment_allocation` | Un pago de 5.000 aplicado por FIFO a 3 facturas deja los saldos correctos |
+| CXP-04 | `cargo test cxp::ven_nif_report` | El libro VEN-NIF de CxP y los comprobantes de retención salen con las columnas del SENIAT |
+| CXP-05 | `cargo test cxp::subledger_invariance` | El sub-ledger de proveedores cuadra con la cuenta `2105` al centavo |
+
+### 23.4 Tesorería (TSY)
+
+| Código | Prueba | Resultado esperado |
+| :--- | :--- | :--- |
+| TSY-01 | `cargo test treasury::bank_reconciliation` | Un CSV de 200 líneas concilia 180 automáticas, 15 sugeridas y deja 5 sin coincidencia |
+| TSY-02 | `cargo test treasury::cash_flow_projection` | Con cobros de 50M, pagos de 30M e impuestos de 5M, el flujo neto a 30 días es 15M |
+| TSY-03 | `cargo test treasury::daily_position` | Los saldos contables cuadran con el banco más los ítems de conciliación pendientes |
+| TSY-04 | `cargo test treasury::check_lifecycle` | Cada estado del cheque (emisión, depósito, cobro o rechazo) genera su asiento |
+
+### 23.5 Activos fijos (FA)
+
+| Código | Prueba | Resultado esperado |
+| :--- | :--- | :--- |
+| FA-01 | `cargo test fixed_assets::depreciation_lineal` | Un activo de 100.000 a 5 años con valor residual de 10.000 deprecia 1.500 por mes |
+| FA-02 | `cargo test fixed_assets::revaluation` | El revalúo de 100.000 a 150.000 abre el superávit de 50.000 y recalcula la depreciación |
+| FA-03 | `cargo test fixed_assets::disposal_gain` | La venta en 80.000 con costo de 100.000 y acumulada de 30.000 deja la ganancia de 10.000 |
+| FA-04 | `cargo test fixed_assets::fiscal_vs_contable` | La divergencia fiscal contra contable abre el diferido correcto |
+
+### 23.6 Presupuestos, centros de costo y compras (BUD, CC, PRC)
+
+| Código | Prueba | Resultado esperado |
+| :--- | :--- | :--- |
+| BUD-01 | `cargo test budget::execution_auto` | Los asientos del mes actualizan la ejecución del presupuesto |
+| BUD-02 | `cargo test budget::alerts` | El gasto al 90% genera la alerta ámbar y la notifica al responsable |
+| CC-01 | `cargo test cost_center::allocation` | Un asiento de 10.000 se imputa 60% en `CC01` y 40% en `CC02` |
+| CC-02 | `cargo test project::profitability` | Ingresos de 100M, costos directos de 60M e indirectos de 20M arrojan un margen de 20M |
+| PRC-01 | `cargo test procurement::pr_to_po` | La solicitud aprobada genera la orden con los mismos datos |
+| PRC-02 | `cargo test procurement::three_way_match` | Orden de 100, recibo de 95 y factura de 95 aprueban con 5 unidades pendientes |
+| PRC-03 | `cargo test procurement::inventory_integration` | La recepción aprobada registra la entrada del kardex |
+
 ## 26. Plan del proyecto y reglas de trabajo
 
 El proyecto avanza en fases acumulativas; esta sección resume la ruta y fija las reglas transversales de cumplimiento para cada tarea.
