@@ -342,6 +342,44 @@ Las entidades del sub-ledger de proveedores residen en `erp-core` y se materiali
 
 Los ejemplos del módulo viven en el apéndice (sección 24), y el glosario (sección 25) define: verificación cruzada de 3 documentos, comprobante de retención, retención de IVA a proveedores SPE y costo landed de importaciones.
 
+## 10. Tesorería y flujo de caja
+
+La tesorería consolida las cuentas bancarias, la conciliación, la posición diaria y el flujo proyectado para que el gerente decide con la caja real en la mano.
+
+### 10.1 Alcance
+
+| Aspecto | Decisión |
+| :--- | :--- |
+| Cuentas bancarias | Múltiples por tenant y multi-moneda (VES, USD, EUR) con saldo visible al momento |
+| Conciliación | Manual, importación CSV o Excel, coincidencia por reglas (monto, fecha ± 2 días, referencia) y conciliación automática en Fase 6 |
+| Flujo proyectado | Entradas esperadas (cobros de CxC) más salidas programadas (pagos de CxP), nómina e impuestos, a horizontes de 30, 60 y 90 días |
+| Posición diaria | Saldos de apertura, movimientos del día y saldos de cierre por cuenta y moneda |
+| Transferencias internas | Entre cuentas del tenant, multi-moneda con la tasa del BCV o la del mercado configurada |
+| Cheques | Emisión, depósito, rechazo y posfechados, con estados en cartera, depositado, cobrado o rechazado |
+
+### 10.2 Modelo de datos
+
+- `BankAccount` (cuenta bancaria): banco, tipo (corriente o ahorro), moneda, número, cuenta contable vinculada y estado.
+- `BankStatement` (extracto): cuenta, periodo, balance inicial y final, archivo de origen y estado.
+- `BankStatementLine` (línea de extracto): fecha, descripción, monto, tipo (débito o crédito), referencia, estado de conciliación y vínculo al pago, transferencia o brecha identificada (discrepancia).
+- `CashFlowProjection` (proyección de flujo): fecha de corte, horizonte, entradas esperadas, salidas programadas y saldo proyectado.
+- `InternalTransfer` (transferencia interna): cuentas de origen y destino, montos, monedas y tasa aplicada.
+
+### 10.3 Funcionalidades por fase (Fase 4 y Fase 5)
+
+- Modelo de datos con migraciones y asientos automáticos de transferencias, cheques e intereses bancarios.
+- Conciliación bancaria: importación, coincidencia sugerida por reglas, confirmación manual y asiento de ajuste por diferencias.
+- Posición diaria de tesorería: saldos por cuenta y moneda, con el disponible real contra el contable.
+- Flujo de caja proyectado de forma automática desde cobros de CxC, pagos de CxP, impuestos y nómina importada (enlace a la sección 20 para el alcance de nómina).
+- Gestión de cheques: emisión, seguimiento, depósito, rechazo y contabilización de cada estado.
+- Reportes: posición diaria, flujo real contra proyectado, conciliación pendiente y cheques en cartera.
+
+### 10.4 Criterios de aceptación
+
+> **Criterios de aceptación (tesorería):** `cargo test treasury::bank_reconciliation` (TSY-01) concilia un CSV de 200 líneas (180 automáticas, 15 sugeridas, 5 sin coincidencia); `cargo test treasury::cash_flow_projection` (TSY-02) calcula el flujo neto de 15 M a 30 días con cobros de 50 M, pagos de 30 M e impuestos de 5 M; `cargo test treasury::daily_position` (TSY-03) cuadra saldos contables con el banco más los ítems pendientes de conciliación; `cargo test treasury::check_lifecycle` (TSY-04) contabiliza los asientos de cada estado del cheque.
+
+Los ejemplos del módulo viven en el apéndice (sección 24), y el glosario (sección 25) define posición de tesorería y conciliación pendiente.
+
 ## 22. Estrategia de pruebas
 
 La estrategia de pruebas protege los invariantes del negocio; cada capa verifica un aspecto distinto del sistema.

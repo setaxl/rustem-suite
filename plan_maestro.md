@@ -117,6 +117,10 @@ En esta fase implementas el ciclo completo de ventas ajustado a la legislación 
   - Dashboard de CxP: aging de proveedores, próximos vencimientos y flujo de salidas proyectado.
   - Entregable: ciclo de pagos a proveedores operativo con retenciones comprobables ante el SENIAT.
 - **F4-08 (L): tesorería y flujo de caja.**
+  - Modelo de datos (`BankAccount`, `BankStatement`, `BankStatementLine`, `CashFlowProjection`, `InternalTransfer`) con migraciones.
+  - Conciliación bancaria: importación, coincidencia por reglas y confirmación manual con asiento de ajuste.
+  - Posición diaria por cuenta y moneda: disponible real contra saldo contable.
+  - Entregable: tesorería operativa con conciliación diaria y visión de caja multi-moneda.
 
 ### Fase 5: contabilidad bimoneda en partida doble (VEN-NIF)
 
@@ -146,6 +150,10 @@ En esta fase construyes el sistema contable en partida doble con reexpresión bi
   - Libro VEN-NIF de CxP formal y comprobantes de retención en formato SENIAT.
   - Entregable: sub-ledger cuadrado al centavo, comprobantes correlativos y exportación de auditoría lista.
 - **F5-06 (L): integración contable de tesorería.**
+  - Asientos automáticos para transferencias internas (con tasa aplicada), cheques en cada estado e intereses o comisiones bancarios.
+  - Flujo de caja proyectado con datos de cobros (CxC), pagos (CxP), impuestos y nómina importada.
+  - Reportes de posición diaria, flujo real contra proyectado y conciliación pendiente.
+  - Entregable: los saldos contables de caja equivalen a los del banco, con ajustes auditables.
 - **F5-07 (L): activos fijos y depreciación.**
 - **F5-08 (M): presupuestos y control presupuesto vs. real.**
 - **F5-09 (M): centros de costo y proyectos.**
