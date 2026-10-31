@@ -683,7 +683,7 @@ La estrategia de pruebas protege los invariantes del negocio; cada capa verifica
 1. **Unitarias:** verificas invariantes contables (la suma de los débitos es igual a la suma de los créditos), los algoritmos FIFO y AVCO, el cálculo de IVA e IGTF, y la validación de RIF y numeración fiscal, con pruebas de propiedad de `proptest`.
 2. **Integración (Podman + SurrealDB real):** validas migraciones, transacciones ACID y aislamiento multi-tenant en un contenedor efímero de Podman.
 3. **HTTP (utilidades de prueba de `Axum`):** verificas con `tower::ServiceExt::oneshot` las cookies `httpOnly`, los flujos PRG, los códigos HTTP y las cabeceras de seguridad.
-4. **Guardián "cero JavaScript":** automatizas una prueba que inspecciona el HTML de todos los endpoints de presentación y falla al detectar `<script` o atributos que inicien con `on*`.
+4. **Guardián «cero JavaScript»:** automatizas una prueba que inspecciona el HTML de todos los endpoints de presentación y falla al detectar `<script` o atributos que inicien con `on*`.
 5. **E2E (Fantoccini + navegador headless nativo en Fedora):** automatizas los flujos completos: inicio de sesión, creación de empresa, alta de inventario, venta con IGTF e IVA, y chequeo del asiento contable generado.
 6. **Seguridad y rendimiento:** inspeccionas `cargo audit`, sometes el endpoint de inicio de sesión a pruebas de estrés con `oha` y mides con `criterion`; objetivo de p95 por debajo de 200 ms en handlers clave.
 

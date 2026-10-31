@@ -197,7 +197,7 @@ En esta fase aseguras el sistema ante auditorías, implementas cifrado defensivo
   - Configuración de Axum con `rustls` (sin OpenSSL nativo en C).
   - `Podmanfile` multi-stage optimizado para Fedora Rawhide, con la ejecución standard de Podman.
   - Entregable: imagen de Podman lista para producción, operable con `podman run` en modo estándar.
-- **F6-03 (L): batería de pruebas guardián "cero JavaScript", cobertura y carga.**
+- **F6-03 (L): batería de pruebas guardián «cero JavaScript», cobertura y carga.**
   - Cobertura de 85% o más en módulos de dominio validada con `cargo-llvm-cov`.
   - Pruebas de estrés con `oha` contra los handlers del servidor.
   - Prueba sintáctica automatizada que valida la ausencia total de `<script` y `on*=` en el HTML de salida.
@@ -222,6 +222,11 @@ En esta fase aseguras el sistema ante auditorías, implementas cifrado defensivo
   - Aranceles, IVA de importación, IGTF y gastos de llegada integrados al costo landed del producto.
   - Inventario en tránsito por puerto o almacén fiscal hasta la recepción final (sección 15 de `especificaciones.md`).
   - Entregable: la mercancía importada ingresa al inventario con su costo total documentado.
+- **F6-08 (L): portal del proveedor (opcional).**
+  - Consulta de órdenes de compra propias con su estado de envío, recepción y facturación asociada.
+  - Carga de facturas del proveedor con su documento de respaldo, que ingresa a la verificación cruzada de la sección 9.
+  - Consulta del estado de los pagos aplicados a sus facturas.
+  - Entregable: el proveedor consulta órdenes, carga facturas y revisa sus pagos desde el portal (sección 14 de `especificaciones.md`).
 
 ### Fuera del alcance del MVP
 
