@@ -155,6 +155,13 @@ En esta fase construyes el sistema contable en partida doble con reexpresión bi
   - Reportes de posición diaria, flujo real contra proyectado y conciliación pendiente.
   - Entregable: los saldos contables de caja equivalen a los del banco, con ajustes auditables.
 - **F5-07 (L): activos fijos y depreciación.**
+  - Modelo de datos (`FixedAsset`, `DepreciationRun`, `DepreciationLine`, `AssetRevaluation`, `AssetDisposal`) con migraciones y asignación a centro de costo.
+  - Motor de depreciación mensual por lote con vista previa y asiento masivo.
+  - Revaluación NIC 16: ajuste del activo, superávit de revaluación en patrimonio y depreciación futura recalculada.
+  - Bajas y ventas con ganancia o pérdida, asiento y reporte de ganancia ocasional de ISLR.
+  - Conciliación de depreciación fiscal (ley de ISLR) contra contable (NIC 16) con diferidos.
+  - Inventario físico con planillas, conciliación y ajustes.
+  - Entregable: registro de activos cuadrado entre cartera, mayor y diferidos fiscales.
 - **F5-08 (M): presupuestos y control presupuesto vs. real.**
 - **F5-09 (M): centros de costo y proyectos.**
 - **F5-10 (M): BI y reportes gerenciales.**

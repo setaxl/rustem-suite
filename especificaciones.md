@@ -380,6 +380,45 @@ La tesorería consolida las cuentas bancarias, la conciliación, la posición di
 
 Los ejemplos del módulo viven en el apéndice (sección 24), y el glosario (sección 25) define posición de tesorería y conciliación pendiente.
 
+## 11. Activos fijos y depreciación
+
+El módulo de activos fija la vida contable de los inmuebles y equipos, calcula la depreciación, gestiona revaluaciones y bajas, y concilla la depreciación fiscal con la contable.
+
+### 11.1 Alcance
+
+| Aspecto | Decisión |
+| :--- | :--- |
+| Tipos de activos | Bienes muebles, inmuebles, equipos, vehículos, mejoras en bienes arrendados e intangibles (software, licencias) |
+| Métodos de depreciación | Lineal, dígitos de los años, unidades producidas y componentes (NIC 16) |
+| Revaluación | Sí, conforme a la NIC 16, con ajuste al superávit de revaluación en patrimonio |
+| Bajas y ventas | Cálculo de ganancia o pérdida, asiento automático y reporte fiscal |
+| Depreciación fiscal contra contable | Diferenciada (ley de ISLR contra NIC 16), con conciliación de pasivos y activos diferidos |
+| Inventario físico | Planillas de conteo, toma física, conciliación y ajustes |
+
+### 11.2 Modelo de datos
+
+- `FixedAsset` (activo fijo): código, descripción, categoría, cuentas contables (activo, depreciación acumulada y gasto), fecha de adquisición, costo original, vida útil en meses, método, valor residual, proveedor, factura de origen y estado.
+- `DepreciationRun` (corrida de depreciación): periodo, fecha de ejecución, estado (borrador o confirmado) y total.
+- `DepreciationLine` (línea de depreciación): corrida, activo, cuota del mes, acumulada y valor neto en libros.
+- `AssetRevaluation` (revaluación): fecha, valor anterior y nuevo, superávit y cuenta de patrimonio.
+- `AssetDisposal` (baja o venta): fecha, tipo (venta, baja o donación), valor de venta, costo retirado, depreciación acumulada retirada y resultado.
+
+### 11.3 Funcionalidades por fase (Fase 5 y Fase 6)
+
+- Modelo de datos con migraciones, alta, baja y modificación de activos, y asignación de centro de costo (sección 13).
+- Motor de depreciación mensual por lote con vista de vista previa (preview) y asiento masivo.
+- Revaluación conforme a la NIC 16: índice oficial o valor de mercado, ajuste del activo, superávit en patrimonio y recalculo de la depreciación futura.
+- Bajas y ventas con cálculo de ganancia o pérdida, asiento y reporte fiscal (ganancia ocasional de ISLR).
+- Depreciación fiscal (ley de ISLR) contra contable (NIC 16) con conciliación de diferidos.
+- Inventario físico con planillas, captura, conciliación y ajustes.
+- Reportes: registro de activos, depreciación del mes, movimientos del periodo, revaluaciones, bajas y diferidos.
+
+### 11.4 Criterios de aceptación
+
+> **Criterios de aceptación (activos fijos):** `cargo test fixed_assets::depreciation_lineal` (FA-01) calcula 1500 mensuales para un activo de 100.000 a 5 años con residual de 10.000; `cargo test fixed_assets::revaluation` (FA-02) registra el superávit de 50.000 y recalcula la depreciación; `cargo test fixed_assets::disposal_gain` (FA-03) obtiene la ganancia de 10.000 al vender en 80.000 con costo de 100.000 y acumulada de 30.000; `cargo test fixed_assets::fiscal_vs_contable` (FA-04) calcula el diferido cuando las dos depreciaciones divergen.
+
+Los ejemplos del módulo viven en el apéndice (sección 24), y el glosario (sección 25) define vida útil, valor residual, superávit de revaluación y diferido fiscal.
+
 ## 22. Estrategia de pruebas
 
 La estrategia de pruebas protege los invariantes del negocio; cada capa verifica un aspecto distinto del sistema.
