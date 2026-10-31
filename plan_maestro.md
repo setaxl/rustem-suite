@@ -112,7 +112,7 @@ En esta fase implementas el ciclo completo de ventas ajustado a la legislación 
   - Solicitud de compra (PR) con aprobación y conversión a orden de compra (PO).
   - Órdenes con seguimiento y recepción parcial o total con control de calidad (`QualityControl`).
   - Entrada automática al inventario (kardex) al aprobar la recepción.
-  - Factura de proveedor con verificación cruzada de los 3 documentos y retenciones (enlace a la sección 14.3 de `especificaciones.md`).
+  - Factura de proveedor con verificación cruzada de los 3 documentos y retenciones (secciones 9.3 y 14 de `especificaciones.md`).
   - Entregable: ciclo PR a PO a recepción a factura cubierto con trazabilidad de cantidades.
 - **F4-07 (L): cuentas por pagar (CxP) con retenciones fiscales.**
   - Modelo de datos CxP en `erp-core` con migraciones y grafos `RELATE supplier->HAS_PO->purchase_order` y `goods_receipt->HAS_INVOICE->supplier_invoice`.

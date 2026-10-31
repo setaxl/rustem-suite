@@ -44,8 +44,8 @@ El ERP implementa el marco contable y fiscal local; esta sección enumera las no
 - **Impuesto a las Grandes Transacciones Financieras (IGTF):** el sistema calcula e imputa este gravamen en pagos con divisas, efectivo o criptoactivos, con alícuota configurable por tenant según la Providencia del Servicio Nacional Integrado de Administración Aduanera y Tributaria (SENIAT) vigente.
 - **Numeración y control fiscal:** el sistema emite facturas, notas de débito, notas de crédito y guías de despacho bajo la Providencia administrativa SNAT/2011/00071 del SENIAT (reglas de numeración, número de control, series y formato del Registro Único de Información Fiscal (RIF) con prefijos `V-`, `J-`, `G-`, `E-`, `P-`).
 - **Comprobantes de retención:** el sistema genera comprobantes de retención de IVA e Impuesto Sobre la Renta (ISLR) con numeración correlativa anual o mensual.
-- **Tasas oficiales del BCV:** el administrador consulta y actualiza la tasa de cambio oficial diaria del Banco Central de Venezuela (BCV), fuente requerida para la facturación y la valoración diaria, y el módulo mantiene el historial por fecha y hora; la automatización híbrida, el respaldo y la auditoría del dato quedan documentados en el ADR-007 (decisión de negocio 1).
-- **Facturación impresa y electrónica:** el formato impreso con CSS de impresión (`@media print`) es el requisito vigente, y la exportación en notación de objetos JavaScript (JSON) con esquema Universal Business Language (UBL) 2.1 queda configurable por tenant; los detalles están en el ADR-008 (decisión de negocio 2).
+- **Tasas oficiales del BCV:** el administrador consulta y actualiza la tasa de cambio oficial diaria del Banco Central de Venezuela (BCV), fuente requerida para la facturación y la valoración diaria, y el módulo mantiene el historial por fecha y hora; la automatización híbrida, el respaldo y la auditoría del dato quedan documentados en el ADR-007 (decisión de negocio 1), con los criterios BCV-01 a BCV-03 definidos en la sección 23.
+- **Facturación impresa y electrónica:** el formato impreso con CSS de impresión (`@media print`) es el requisito vigente, y la exportación en notación de objetos JavaScript (JSON) con esquema Universal Business Language (UBL) 2.1 queda configurable por tenant; los detalles están en el ADR-008 (decisión de negocio 2), con los criterios INV-01 a INV-03 definidos en la sección 23.
 
 ### 3.3 Reexpresión por inflación (NIC 29 / BA VEN-NIF 7)
 
@@ -63,7 +63,7 @@ Venezuela opera en hiperinflación, por lo que los estados financieros se reexpr
 La regla de frontend es una condición de entrega: el HTML que produce el servidor es el entregable final.
 
 - **Restricción central:** cero JavaScript en el cliente (hecho crítico): no incluyes scripts propios, de frameworks ni WebAssembly ejecutable en el navegador. Ejecutas Leptos en modo SSR puro, sin `HydrationScripts`.
-- El HTML generado excluye, sin excepciones: etiquetas `<script>`, referencias a JavaScript externo, atributos de eventos (`onclick`, `onchange`, `onsubmit`, `onload`), estilos en línea (`style="..."`) y librerías de cliente (HTMX, Alpine.js, jQuery, React, Vue).
+- El HTML generado excluye, sin excepciones: etiquetas `<script>`, referencias a JavaScript externo, atributos de eventos (`onclick`, `onchange`, `onsubmit`, `onload`), estilos en línea con el atributo `style` y librerías de cliente (HTMX, Alpine.js, jQuery, React, Vue).
 - **Interactividad permitida (estándares web nativos):**
   - Formularios nativos `<form method="post">` hacia los handlers de Axum y Leptos con el patrón PRG (post redirect get): envías, rediriges y solicitas con `GET`, y muestras el mensaje flash renderizado en el servidor.
   - HTML semántico avanzado: `<details>` y `<summary>` para menús colapsables, `<form method="dialog">` para diálogos, y entradas nativas (`type="date"`, `type="number"`, `select`, `type="checkbox"`).
