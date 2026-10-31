@@ -10,7 +10,7 @@ meta:
 
 TL;DR: este plan maestro ordena el desarrollo de Rustem Suite en seis fases (F1 a F6) con tareas acotadas, entregables verificables y una definición de hecho (DoD: Definition of Done) por fase. Cubre base y autenticación (F1), roles, aislamiento y auditoría (F2), inventario y valoración (F3), ventas con facturación fiscal, cobranza y pagos (F4), contabilidad en bimoneda, reexpresión y finanzas (F5) y endurecimiento con integraciones (F6), más los registros de decisión de arquitectura (ADRs), la matriz de riesgos y los límites técnicos de SurrealDB. La especificación técnica de cada módulo está en `especificaciones.md`.
 
-El entorno de ejecución es Fedora Rawhide con Podman standard; el marco normativo lo conforman la Norma de Información Financiera venezolana (VEN-NIF) con el SENIAT (Providencia SNAT/2011/00071, IGTF, retenciones de IVA e ISLR, tasas del BCV); el frontend es Leptos SSR puro con cero JavaScript; y las dependencias son 100% Rust, sin librerías nativas de C o C++.
+El entorno de ejecución es Fedora Rawhide con Podman standard; el marco normativo lo conforman la Norma de Información Financiera venezolana (VEN-NIF) con el SENIAT (Providencia SNAT/2011/00071, IGTF, retenciones de IVA e ISLR, tasas del BCV); el frontend es Leptos con renderizado del servidor (SSR: server-side rendering) puro con cero JavaScript; y las dependencias son 100% Rust, sin librerías nativas de C o C++.
 
 ## 1. Backlog detallado por fases (F1 a F6)
 
@@ -51,7 +51,7 @@ En esta fase garantizas el aislamiento por empresa (tenant) e implementas la mat
   - Contexto de sesión en Axum que inyecta `tenant_id` (Company ID) en las extensiones del request.
   - Wrapper en `erp-db` que adjunta automáticamente el `tenant_id` a cada `SELECT`, `CREATE`, `UPDATE` o `RELATE`.
   - Entregable: pruebas de integración HTTP que verifican que el tenant A no accede a los datos del tenant B en ningún escenario.
-- **F2-02 (L): matriz RBAC (roles y permisos).**
+- **F2-02 (L): matriz de control de acceso basado en roles (RBAC):** roles y permisos.
   - Definición de roles (`Owner`, `Administrador`, `Contador`, `Vendedor`, `Almacenista`).
   - Relaciones de grafo en SurrealDB: `user -> HAS_ROLE -> role -> CAN_ACCESS -> permission`.
   - Middleware `RbacGuard` en Axum para proteger rutas según módulo y acción.
@@ -73,7 +73,7 @@ En esta fase gestionas existencias multi-almacén con valoración conforme a la 
   - Entregable: formularios SSR para la gestión de productos y stock mínimo.
 - **F3-02 (L): movimientos de inventario y grafo de trazabilidad.**
   - Relación `RELATE warehouse->HAS_STOCK->product` con control de lote y fecha de vencimiento.
-  - Movimientos inmutables: entradas, salidas, transferencias y ajustes vía transacciones ACID en SurrealDB.
+  - Movimientos inmutables: entradas, salidas, transferencias y ajustes vía transacciones ACID (atomicidad, consistencia, aislamiento y durabilidad) en SurrealDB.
   - Entregable: invariante de stock: el sistema rechaza el stock negativo salvo configuración explícita.
 - **F3-03 (L): algoritmos de valoración FIFO y promedio ponderado (AVCO).**
   - Implementación en `erp-inventory` del cálculo del costo de ventas e inventario final conforme a la NIC 2.
@@ -213,7 +213,7 @@ En esta fase aseguras el sistema ante auditorías, implementas cifrado defensivo
   - Conversión de la oportunidad cerrada ganada a pedido de ventas con trazabilidad completa.
   - Entregable: el vendedor sigue el embudo en el sistema, sin hojas de cálculo.
 - **F6-06 (M): notificaciones y alertas.**
-  - Canales: correo saliente (SMTP), notificación en la aplicación, webhook y SMS con proveedor configurable.
+  - Canales: correo saliente (SMTP), notificación en la aplicación, webhook y mensaje corto (SMS) con proveedor configurable.
   - Eventos por módulo: factura vencida, pago recibido, stock mínimo y alerta de presupuesto.
   - Preferencias por usuario con horario de silencio y digest, plantillas por idioma, historial con estado y reintentos (sección 18 de `especificaciones.md`).
   - Entregable: los avisos llegan por el canal correcto y quedan en historial auditado.
@@ -265,7 +265,7 @@ La matriz prioriza las mitigaciones; cada riesgo cubre el impacto y la medida co
 
 ## 4. Decisiones de negocio
 
-Las tres open questions del backlog quedan resueltas; cada decisión adopta su opción elegida y queda registrada como un ADR (sección 6).
+Las tres preguntas abiertas del backlog quedan resueltas; cada decisión adopta su opción elegida y queda registrada como un ADR (sección 6).
 
 1. **Gestión de tasas de cambio BCV (DEC-001): opción híbrida.** El job programado (tokio-cron a las 10:00) realiza el consumo del sitio oficial del BCV cada día, el administrador corrige manualmente (overrides) cuando corresponde, el sistema alerta si falla la carga y registra la auditoría completa de cada cambio. Detalle en el ADR-007.
 2. **Facturación impresa y electrónica (DEC-002): opción dual.** El formato HTML imprimible con CSS de impresión es el requisito vigente, y la exportación JSON/UBL 2.1 (Universal Business Language) queda configurable por tenant para los proveedores autorizados (FacturaYa, Sovos). Detalle en el ADR-008.
@@ -283,7 +283,7 @@ Estas notas de revisión guían el uso de SurrealDB para ajustar la implementaci
 
 Los nueve ADRs registran las decisiones duraderas del sistema; el detalle completo vive en la sección 7 de `especificaciones.md` y aquí se listan resumidos para la trazabilidad del backlog.
 
-- **ADR-001: SurrealDB sobre PostgreSQL.** Grafo con `RELATE`, esquema flexible y transacciones ACID; la curva de aprendizaje se mitiga con pruebas exhaustivas.
+- **ADR-001: SurrealDB sobre PostgreSQL.** Grafo con `RELATE`, esquema flexible y transacciones ACID; las pruebas exhaustivas mitigan la curva de aprendizaje.
 - **ADR-002: Leptos SSR puro sobre WebAssembly o SPA.** Cero JavaScript en el cliente, CSP sin `unsafe-inline`, SEO y conservación de la interactividad con HTML semántico y CSS.
 - **ADR-003: Fedora Rawhide + Podman standard.** Motor de contenedores sin demonio y paquetes upstream; la rolling release exige pruebas frecuentes (CI en Fedora estable y Rawhide). Docker queda excluido.
 - **ADR-004: Rust 100% puro, sin C/C++.** Solo crates 100% Rust (`rustls`, `ring`, RustCrypto, `rust-embed`); el sistema excluye OpenSSL, `libsqlite3` y `zlib` nativo.

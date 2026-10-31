@@ -155,7 +155,7 @@ rustem-suite/
 │   ├── erp-frontend/    # Componentes y vistas Leptos (SSR puro)
 │   └── erp-web/         # Servidor Axum: rutas, handlers, middlewares y estáticos
 ├── static/              # CSS base, tokens de diseño, fuentes e imágenes
-├── migrations/          # Esquema e índices idempotentes en archivos .surql
+├── templates/           # Plantillas askama de la factura imprimible
 └── Podmanfile           # Contenedor de producción construido en Fedora
 ```
 
@@ -176,13 +176,13 @@ Los registros de decisión (ADRs) documentan las opciones tomadas; cada uno regi
   - Estado: aceptada.
   - Contexto: el modelo requiere grafo (auditoría, trazabilidad, RBAC) combinado con esquema flexible y transacciones ACID.
   - Decisión: SurrealDB 3.x standalone. Aportes: `RELATE` nativo, `SCHEMAFULL` opcional, transacciones ACID y SDK Rust oficial.
-  - Consecuencias: curva de aprendizaje y comunidad más pequeña que PostgreSQL; se mitiga con pruebas exhaustivas.
+  - Consecuencias: curva de aprendizaje y comunidad más pequeña que PostgreSQL; las pruebas exhaustivas la mitigan.
   - Enlaces: documentación en `surrealdb.com/docs`.
 - **ADR-002: Leptos SSR puro.**
   - Estado: aceptada.
   - Contexto: la restricción funcional excluye JavaScript en el cliente (seguridad, SEO y rendimiento).
   - Decisión: Leptos en modo SSR puro, sin `HydrationScripts`; el HTML sale directo del servidor.
-  - Consecuencias: sin interactividad del lado del cliente; se compensa con HTML semántico (`<details>`, `<dialog>`, formularios PRG) y CSS reactivo (`:checked`, `:target`, `prefers-color-scheme`).
+  - Consecuencias: sin interactividad del lado del cliente; el HTML semántico (`<details>`, `<dialog>`, formularios PRG) y el CSS reactivo (`:checked`, `:target`, `prefers-color-scheme`) la compensan.
 - **ADR-003: Fedora Rawhide + Podman standard.**
   - Estado: aceptada.
   - Contexto: el motor de contenedores sin demonio reduce la superficie de ataque, y Fedora entrega paquetes upstream recientes con compatibilidad Rust.
@@ -282,7 +282,7 @@ Los ejemplos de este módulo viven en el apéndice de ejemplos (sección 24), ya
 
 ### 8.6 Términos del módulo
 
-El glosario (sección 25) define: aging, pronto pago, interés moratorio, diferencia de cambio de la cartera, conciliación bancaria, plan de cuotas, sub-ledger, provisión de cobros dudosos y factoring.
+El glosario (sección 25.3) define: aging, pronto pago, interés moratorio, conciliación bancaria, sub-ledger, provisión de cobros dudosos y factoring.
 
 ## 9. Cuentas por pagar (CxP)
 
@@ -344,7 +344,7 @@ Los ejemplos del módulo viven en el apéndice (sección 24), y el glosario (sec
 
 ## 10. Tesorería y flujo de caja
 
-La tesorería consolida las cuentas bancarias, la conciliación, la posición diaria y el flujo proyectado para que el gerente decide con la caja real en la mano.
+La tesorería consolida las cuentas bancarias, la conciliación, la posición diaria y el flujo proyectado para que el gerente decida con la caja real en la mano.
 
 ### 10.1 Alcance
 
@@ -378,11 +378,11 @@ La tesorería consolida las cuentas bancarias, la conciliación, la posición di
 
 > **Criterios de aceptación (tesorería):** `cargo test treasury::bank_reconciliation` (TSY-01) concilia un CSV de 200 líneas (180 automáticas, 15 sugeridas, 5 sin coincidencia); `cargo test treasury::cash_flow_projection` (TSY-02) calcula el flujo neto de 15 M a 30 días con cobros de 50 M, pagos de 30 M e impuestos de 5 M; `cargo test treasury::daily_position` (TSY-03) cuadra saldos contables con el banco más los ítems pendientes de conciliación; `cargo test treasury::check_lifecycle` (TSY-04) contabiliza los asientos de cada estado del cheque.
 
-Los ejemplos del módulo viven en el apéndice (sección 24), y el glosario (sección 25) define posición de tesorería y conciliación pendiente.
+Los ejemplos del módulo viven en el apéndice (sección 24), y el glosario (sección 25.3) define la conciliación bancaria.
 
 ## 11. Activos fijos y depreciación
 
-El módulo de activos fija la vida contable de los inmuebles y equipos, calcula la depreciación, gestiona revaluaciones y bajas, y concilla la depreciación fiscal con la contable.
+El módulo de activos fija la vida contable de los inmuebles y equipos, calcula la depreciación, gestiona revaluaciones y bajas, y concilia la depreciación fiscal con la contable.
 
 ### 11.1 Alcance
 
@@ -406,7 +406,7 @@ El módulo de activos fija la vida contable de los inmuebles y equipos, calcula 
 ### 11.3 Funcionalidades por fase (Fase 5 y Fase 6)
 
 - Modelo de datos con migraciones, alta, baja y modificación de activos, y asignación de centro de costo (sección 13).
-- Motor de depreciación mensual por lote con vista de vista previa (preview) y asiento masivo.
+- Motor de depreciación mensual por lote con vista previa y asiento masivo.
 - Revaluación conforme a la NIC 16: índice oficial o valor de mercado, ajuste del activo, superávit en patrimonio y recalculo de la depreciación futura.
 - Bajas y ventas con cálculo de ganancia o pérdida, asiento y reporte fiscal (ganancia ocasional de ISLR).
 - Depreciación fiscal (ley de ISLR) contra contable (NIC 16) con conciliación de diferidos.
@@ -417,7 +417,7 @@ El módulo de activos fija la vida contable de los inmuebles y equipos, calcula 
 
 > **Criterios de aceptación (activos fijos):** `cargo test fixed_assets::depreciation_lineal` (FA-01) calcula 1500 mensuales para un activo de 100.000 a 5 años con residual de 10.000; `cargo test fixed_assets::revaluation` (FA-02) registra el superávit de 50.000 y recalcula la depreciación; `cargo test fixed_assets::disposal_gain` (FA-03) obtiene la ganancia de 10.000 al vender en 80.000 con costo de 100.000 y acumulada de 30.000; `cargo test fixed_assets::fiscal_vs_contable` (FA-04) calcula el diferido cuando las dos depreciaciones divergen.
 
-Los ejemplos del módulo viven en el apéndice (sección 24), y el glosario (sección 25) define vida útil, valor residual, superávit de revaluación y diferido fiscal.
+Los ejemplos del módulo viven en el apéndice (sección 24), y la entrada de la NIC 16 del glosario (sección 25.2) cubre depreciación y revaluación.
 
 ## 12. Presupuestos (presupuesto contra ejecución real)
 
@@ -488,7 +488,7 @@ El ciclo de compras extiende CxP e inventario con solicitudes, órdenes, recepci
 - Orden de compra (PO: purchase order) con envío al proveedor, seguimiento y recepción parcial o total.
 - Recepción de mercancía con control de calidad, lote, vencimiento y entrada automática al inventario.
 - Factura de proveedor con verificación cruzada de los 3 documentos (sección 9) y retenciones (sección 9.3).
-- Portal de proveedor opcional (Fase 6+): el proveedor consulta ordenes, carga facturas y revisa pagos.
+- Portal de proveedor opcional (Fase 6+): el proveedor consulta órdenes, carga facturas y revisa pagos.
 
 ### 14.2 Modelo adicional al de CxP
 
@@ -522,7 +522,7 @@ La mercancía importada requiere su propio costo: el sistema suma el valor CIF, 
 - `CustomsDeclaration` (declaración aduanera): licencia, número de DAU, fecha de registro, proveedor, total CIF en USD, arancel, IVA de importación, IGTF, tasa de la fecha de registro, gastos de importación en VES y costo landed en VES.
 - `InTransitInventory` (inventario en tránsito): declaración, producto, cantidad, ubicación (puerto o almacén fiscal) y fecha estimada de llegada.
 
-Los ejemplos del módulo viven en el apéndice (sección 24), y el glosario (sección 25) define DAU, costo landed e inventario en tránsito.
+Los ejemplos del módulo viven en el apéndice (sección 24), y el glosario (sección 25.4) define DAU y costo landed.
 
 ## 16. Gestión de relaciones con clientes (CRM avanzado)
 
@@ -544,7 +544,7 @@ El CRM amplía el cliente básico de la Fase 4 con el ciclo comercial completo; 
 - `Activity` (actividad): oportunidad o cliente, tipo, fecha, descripción, resultado y próxima acción.
 - `QuoteVersion` (versión de cotización): oportunidad, versión, fecha, líneas, total y estado (borrador, enviada, aceptada o rechazada).
 
-La oportunidad cerrada ganada crea el pedido de ventas con las líneas de la cotización aceptada, y hereda las mismas reglas fiscales del motor de facturación (secciones 3.2 y 4). Los ejemplos del módulo viven en el apéndice (sección 24).
+La oportunidad cerrada ganada crea el pedido de ventas con las líneas de la cotización aceptada, y hereda las mismas reglas fiscales del motor de facturación (sección 3.2). Los ejemplos del módulo viven en el apéndice (sección 24).
 
 ## 17. API externa e integraciones
 
@@ -602,7 +602,7 @@ El BI convierte el dato operativo en decisión gerencial; los reportes aplican s
 - Financieros: flujo de caja, márgenes por línea, punto de equilibrio y comparativo del presupuesto (sección 12).
 - Fiscales: IVA de compras y ventas, retenciones, IGTF y libros fiscales del SENIAT.
 
-Los reportes consumen las vistas analíticas de la base y respetan los objetivos de latencia del SLA (sección 21.6).
+Los reportes consumen las vistas analíticas de la base y respetan el acuerdo de servicio (SLA: service level agreement) de la sección 21.6.
 
 ## 20. Fuera del alcance del MVP
 
@@ -649,7 +649,7 @@ Las reglas de esta sección aplican a todos los módulos a la vez; los criterios
 
 ### 21.6 Rendimiento y acuerdos de servicio
 
-La tabla fija el objetivo de latencia p95, el rendimiento objetivo y las notas de cada módulo (SLA: service level agreement).
+La tabla fija el objetivo de latencia p95 y el rendimiento objetivo de cada módulo.
 
 | Módulo | Objetivo p95 | Rendimiento objetivo | Notas |
 | :--- | :--- | :--- | :--- |
@@ -760,7 +760,7 @@ Los 37 criterios consolidan las decisiones de negocio y los módulos; cada uno p
 
 ## 24. Ejemplos ejecutables
 
-Este apéndice reúne 20 archivos de código real copiable al repositorio, agrupados por área; los criterios de la sección 23 prueban este código con `cargo test`. Los bloques `.surql` usan la etiqueta `sql` por ausencia de un resaltador propio.
+Este apéndice reúne 20 archivos de código real copiable al repositorio, agrupados por área; los criterios de la sección 23 prueban este código con `cargo test`. Los bloques `.surql` usan la etiqueta `sql` y el `Podmanfile` usa `dockerfile`, en ambos casos por ser los resaltadores disponibles.
 
 ### 24.1 Infraestructura base
 
@@ -828,7 +828,7 @@ EXPOSE 8080
 ENTRYPOINT ["./rustem-server"]
 ```
 
-**`migrations/001_initial_schema.surql`:** usuarios, sesiones, empresas y auditoría.
+**`crates/erp-db/migrations/001_initial_schema.surql`:** usuarios, sesiones, empresas y auditoría.
 
 ```sql
 DEFINE TABLE user SCHEMAFULL;
@@ -1264,7 +1264,7 @@ El glosario reúne 34 entradas sobre la normativa venezolana e internacional apl
 | CxC | Cuentas por cobrar de ventas a crédito, con factura, vencimiento y saldo pendiente | Práctica contable del VEN-NIF | Sub-ledger de clientes y cuenta 1105 (sección 8) |
 | Aging | Antigüedad de los saldos vencidos, en buckets de 0 a 30, 31 a 60, 61 a 90 y más de 90 días | Práctica comercial | Dashboard y provisión (sección 8) |
 | Pronto pago | Descuento al cliente que paga antes del vencimiento | Condición comercial pactada | Asiento 5110 del descuento (sección 8.3) |
-| Interés moratorio | Cargo adicional por pago pactado y aún en mora | Código de Comercio venezolano | Asiento 4210 (secciones 8.3 y 9.3) |
+| Interés moratorio | Cargo adicional por pago pactado y aún en mora | Código de Comercio venezolano | Asiento 4210 (sección 8.3) |
 | Conciliación bancaria | Igualación del extracto bancario contra el libro, con ajuste por diferencias | Práctica contable | Módulo de tesorería (sección 10) |
 | Sub-ledger | Libro auxiliar de clientes o proveedores, cuadrado contra la cuenta mayor | Práctica contable | Invariantes CXC-06 y CXP-05 (sección 23) |
 | Provisión de cobros dudosos | Estimación de pérdidas por cartera incobrable, por buckets | NIC 9 y VEN-NIF | Política por bucket y gasto (sección 8) |
@@ -1296,7 +1296,7 @@ El proyecto avanza en fases acumulativas; esta sección resume la ruta y fija la
 1. **Fase 0: plan maestro.** Documento `plan_maestro.md` con el backlog por fases, la definición de hecho (DoD: Definition of Done), la matriz de riesgos y los registros de decisión.
 2. **Fase 1: base e infraestructura core.** Workspace de Cargo, SurrealDB en Podman, migraciones idempotentes, autenticación completa con cookies seguras y SSR, router `Axum` con CSS base y batería de pruebas.
 3. **Fase 2: RBAC, multi-tenancy y auditoría.** Roles y permisos, asociación empresa y usuario, guarda de rutas en Axum, `audit_log` en grafo y limitador de inicio de sesión.
-4. **Fase 3: inventario y valoración VEN-NIF.** Almacenes, productos, movimientos en grafo (`RELATE`), valoración primeras entradas, primeras salidas (FIFO: First In, First Out) y costo promedio ponderado (AVCO: average cost), y kardex inmutable.
+4. **Fase 3: inventario y valoración VEN-NIF.** Almacenes, productos, movimientos en grafo (`RELATE`), valoración por primeras entradas, primeras salidas (FIFO: First In, First Out) y costo promedio ponderado (AVCO: average cost), y kardex inmutable.
 5. **Fase 4: ventas, facturación SENIAT, cobranza y pagos.** Clientes, cotizaciones, pedidos, facturas con alícuotas de IVA e IGTF, correlativos de serie, formato impreso con `@media print`, y los flujos completos de cuentas por cobrar (CxC) y cuentas por pagar (CxP) con conciliación bancaria.
 6. **Fase 5: contabilidad doble y bimoneda.** Plan de cuentas venezolano, asientos automáticos y manuales con invariante de partida doble en bimoneda, libro mayor, sumas y saldos, balance general, reexpresión NIC 29, activos fijos, presupuestos, centros de costo y BI.
 7. **Fase 6: endurecimiento y extensibilidad.** Cifrado en reposo, respaldos con restauración validados por Podman, TLS nativo con `rustls`, pruebas de carga, API externa, importaciones, CRM avanzado y notificaciones.
