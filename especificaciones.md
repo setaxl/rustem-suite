@@ -219,6 +219,71 @@ Los registros de decisión (ADRs) documentan las opciones tomadas; cada uno regi
   - Decisión: el administrador carga el INPC mensual con validación, y el motor automático calcula coeficientes, clasificación monetaria, ajuste de patrimonio, resultado por posición monetaria y revelaciones en las notas.
   - Consecuencias: el algoritmo exige exactitud; las pruebas de propiedad con `proptest` y los casos de referencia lo verifican.
 
+## 8. Cuentas por cobrar (CxC)
+
+La gestión de deudores completa el ciclo de ventas: aquí queda la especificación del ciclo de facturación, pagos, aging y libros fiscales.
+
+### 8.1 Alcance y decisiones
+
+La tabla siguiente consolida las decisiones de alcance adoptadas para CxC.
+
+| Aspecto | Decisión |
+| :--- | :--- |
+| Detalle de pagos | Total por factura y desglose por línea de factura |
+| Métodos de pago | Predefinidos (efectivo, transferencia, tarjeta, cheque, criptoactivo y mixto) y configurables por tenant (cuenta contable, comisión y habilitación) |
+| Cuotas y financiamiento | Contado, crédito a días fijos, cuotas fijas (n cuotas con interés opcional) y plan personalizado (fechas y montos variables por factura) |
+| Integración bancaria | Registro manual e importación de extractos en valores separados por comas (CSV) o Excel |
+| Reporte fiscal | Dashboard interno, libro VEN-NIF formal de CxC y exportación CSV o JSON (notación de objetos JavaScript) para auditoría |
+| Moneda | Multi-moneda con la tasa del BCV; la diferencia de cambio se contabiliza conforme a la NIC 21 |
+
+### 8.2 Modelo de datos
+
+Las entidades del sub-ledger de clientes residen en `erp-core` y se materializan en migraciones `SCHEMAFULL`:
+
+- `Customer` (cliente): RIF, razón social, condiciones de pago por defecto, límite de crédito y estatus (activo, bloqueado o moroso).
+- `PaymentTerm` (condición de pago): tipo (contado, crédito o cuotas), días, descuento por pronto pago, interés moratorio y plan de cuotas opcional.
+- `Invoice` (factura): extiende la factura de Fase 4 con `balance_pendiente`, `payment_term_id`, `fecha_vencimiento` y `status_cxc` (pendiente, parcial, pago, vencido o anulado).
+- `Payment` (pago): tenant, cliente, fecha, monto total, moneda, tasa de cambio, método, referencia bancaria y estado (borrador, confirmado, conciliado o anulado).
+- `PaymentAllocation` (aplicación de pago): pago, factura, monto aplicado y fecha (permite aplicar un pago a varias facturas de forma parcial).
+- `PaymentMethod` (método de pago): código, nombre, tipo, cuenta contable, comisión, habilitación y alcance (`tenant_id` nulo significa método global).
+- `InstallmentPlan` (plan de cuotas): factura, número de cuotas, frecuencia, monto, interés y fecha de la primera cuota.
+- `Installment` (cuota individual): plan, número, vencimiento, capital, interés, total y estado (pendiente, pagado, vencido o refinanciado).
+- `BankStatementImport` (importación bancaria): archivo, fecha de importación, estado, líneas procesadas y conciliadas.
+- `AgingSnapshot` (foto de aging): fecha de corte, cliente, buckets 0 a 30, 31 a 60, 61 a 90 y más de 90 días, y total vencido.
+
+### 8.3 Funcionalidades por fase
+
+**Fase 4 (módulo de ventas):**
+
+- Modelo de datos en `erp-core` y migraciones con grafos `RELATE customer->HAS_INVOICE->invoice` y `invoice->HAS_PAYMENT->payment`.
+- Registro de pagos multi-método con aplicación automática o manual a facturas (FIFO por vencimiento más prioridad manual).
+- Condiciones de pago por cliente (heredadas del valor por defecto y sobrescribibles por factura), descuento por pronto pago e interés moratorio automático.
+- Planes de cuotas fijas y personalizadas con generación y reprogramación automáticas.
+- Importación de extractos bancarios (CSV o Excel) con matching sugerido por monto, fecha y referencia, más confirmación manual.
+- Dashboard de cartera: aging interactivo con buckets configurables, saldo por cliente, mayores deudores y flujo de caja proyectado a 30, 60 y 90 días.
+- Lista de cobranza con filtros (vencidos, por vencer, morosos), promesas de pago y acciones de seguimiento.
+- Reportes: cartera por cliente, resumen de aging, facturas por vencer, cobranza efectiva y diferencia de cambio de la cartera.
+
+**Fase 5 (módulo de contabilidad):**
+
+- Asientos automáticos: factura (débito `1105`, crédito `4110` más `2408`), pago (débito `1101`, crédito `1105`), diferencia de cambio (`5115`), interés moratorio (`4210`) y descuento por pronto pago (`5110`).
+- Conciliación bancaria por reglas (monto exacto, fecha ± 2 días, referencia) más conciliación manual y ajuste de diferencias.
+- Sub-ledger de clientes sincronizado con el mayor y con el invariante: la suma de los saldos de clientes es igual al saldo de la cuenta `1105`.
+- Libro VEN-NIF formal de CxC con las columnas del formato oficial: fecha, comprobante, cliente, RIF, vencimiento, monto original, abonos, saldo, días vencido y bucket.
+- Exportación de auditoría en CSV o JSON con el esquema de facturas, pagos, asignaciones, aging y asientos vinculados.
+
+### 8.4 Criterios de aceptación
+
+> **Criterios de aceptación (CxC):** `cargo test cxc::aging` (CXC-01) valida el aging de 1000 facturas mixtas; `cargo test cxc::payment_allocation` (CXC-02) aplica el pago de 5000 a 3 facturas por FIFO; `cargo test cxc::installments` (CXC-03) calcula el plan de 12 cuotas de 1000 con interés del 2% (total 12240); `cargo test cxc::bank_import` (CXC-04) importa un CSV de 500 líneas con 480 coincidencias automáticas; `cargo test cxc::ven_nif_report` (CXC-05) valida las columnas del libro oficial; `cargo test cxc::subledger_invariance` (CXC-06) cuadra el sub-ledger contra la cuenta `1105` al centavo; `cargo test cxc::multi_currency` (CXC-07) contabiliza la diferencia de cambio de una factura de 1000 USD pagada al 36.55.
+
+### 8.5 Ejemplos ejecutables
+
+Los ejemplos de este módulo viven en el apéndice de ejemplos (sección 24), ya definido como archivos copiables: `crates/erp-core/src/cxc/types.rs`, `crates/erp-db/migrations/002_cxc_schema.surql`, `crates/erp-sales/src/cxc/payment_service.rs`, `crates/erp-accounting/src/cxc/entries.rs` y `crates/erp-web/src/handlers/cxc.rs`.
+
+### 8.6 Términos del módulo
+
+El glosario (sección 25) define: aging, pronto pago, interés moratorio, diferencia de cambio de la cartera, conciliación bancaria, plan de cuotas, sub-ledger, provisión de cobros dudosos y factoring.
+
 ## 22. Estrategia de pruebas
 
 La estrategia de pruebas protege los invariantes del negocio; cada capa verifica un aspecto distinto del sistema.

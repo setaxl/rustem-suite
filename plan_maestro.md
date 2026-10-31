@@ -99,6 +99,14 @@ En esta fase implementas el ciclo completo de ventas ajustado a la legislación 
   - Vista de factura imprimible conforme a la Providencia SNAT/2011/00071.
   - Entregable: vista en el navegador que produce una impresión impecable con Ctrl+P, sin JavaScript.
 - **F4-05 (L): cuentas por cobrar (CxC) y gestión de deudores.**
+  - Modelo de datos CxC en `erp-core` con migraciones `SCHEMAFULL` y grafo `RELATE customer->HAS_INVOICE->invoice`.
+  - Registro de pagos multi-método con aplicación FIFO por vencimiento y prioridad manual.
+  - Condiciones de pago por cliente, descuento por pronto pago e interés moratorio automático.
+  - Planes de cuotas fijas y personalizadas con generación y reprogramación automáticas.
+  - Importación de extractos bancarios (CSV o Excel) con coincidencia sugerida y confirmación manual.
+  - Dashboard de cartera: aging con buckets configurables, saldo por cliente, mayores deudores y flujo de caja proyectado a 30, 60 y 90 días.
+  - Lista de cobranza con filtros, promesas de pago y acciones de seguimiento.
+  - Entregable: CxC operativo con aging correcto, pagos aplicados y reportes conforme al VEN-NIF.
 - **F4-06 (L): compras, abastecimiento y facturación de proveedores.**
 - **F4-07 (L): cuentas por pagar (CxP) con retenciones fiscales.**
 - **F4-08 (L): tesorería y flujo de caja.**
@@ -120,6 +128,11 @@ En esta fase construyes el sistema contable en partida doble con reexpresión bi
   - Ajuste por diferencia de cambio conforme a la NIC 21 y al BA VEN-NIF 2.
   - Entregable: consultas analíticas en SurrealDB con respuesta inferior a 200 ms.
 - **F5-04 (L): integración contable de CxC.**
+  - Asientos automáticos: factura (débito `1105`, crédito `4110` más `2408`), pago (débito `1101`, crédito `1105`), diferencia de cambio (`5115`), interés moratorio (`4210`) y descuento por pronto pago (`5110`).
+  - Conciliación bancaria por reglas (monto, fecha ± 2 días, referencia) y ajuste de diferencias.
+  - Sub-ledger de clientes sincronizado con el invariante: la suma de los saldos de clientes es igual al saldo de la cuenta `1105` del mayor.
+  - Libro VEN-NIF de CxC formal y exportación de auditoría en CSV y JSON.
+  - Entregable: sub-ledger cuadrado al centavo, asientos atómicos y reportes fiscales listos.
 - **F5-05 (L): integración contable de CxP con retenciones.**
 - **F5-06 (L): integración contable de tesorería.**
 - **F5-07 (L): activos fijos y depreciación.**
