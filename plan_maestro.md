@@ -1,207 +1,201 @@
-# PLAN MAESTRO DE DESARROLLO — RUSTEM SUITE (2026)
-
-**Proyecto:** ERP Modular Full-Stack 100% Rust  
-**Entorno de Trabajo:** Fedora Rawhide / Podman (Rootless Container Runtime)  
-**Marco Normativo Fiscal & Contable:** VEN-NIF (GE / PYME) & SENIAT (Providencias SNAT, IGTF, Retenciones IVA/ISLR, Tasa BCV)  
-**Restricción de Frontend:** CERO JavaScript / Leptos SSR Puro  
-**Políticas Criptográficas y C++:** 100% Rust Pura (Cero librerías nativas C/C++)  
-
+---
+meta:
+  contentType: Reference
+  title: "¿Cómo planifico el desarrollo del ERP Rustem Suite?"
+  navLabel: "Plan maestro Rustem Suite"
+  category: "Requisitos y arquitectura"
 ---
 
-## 1. BACKLOG DETALLADO POR FASES (F1 – F6)
+# ¿Cómo planifico el desarrollo del ERP Rustem Suite?
 
-### FASE 1: BASE E INFRAESTRUCTURA CORE
-*Objetivo:* Establecer el Cargo Workspace, la base de datos SurrealDB en Podman, migraciones idempotentes, la arquitectura hexagonal en Rust y el flujo completo de Autenticación con Cookies seguras y SSR.
+TL;DR: este plan maestro ordena el desarrollo de Rustem Suite en seis fases (F1 a F6) con tareas acotadas, entregables verificables y una definición de hecho (DoD: Definition of Done) por fase. Cubre base y autenticación (F1), roles, aislamiento y auditoría (F2), inventario y valoración (F3), ventas con facturación fiscal, cobranza y pagos (F4), contabilidad en bimoneda, reexpresión y finanzas (F5) y endurecimiento con integraciones (F6), más los registros de decisión de arquitectura (ADRs), la matriz de riesgos y los límites técnicos de SurrealDB. La especificación técnica de cada módulo está en `especificaciones.md`.
 
-* **F1-01 (M) — Configuración del Workspace y Toolchain en Fedora Rawhide:**
-  * Crear estructura multi-crate (`erp-core`, `erp-auth`, `erp-admin`, `erp-db`, `erp-inventory`, `erp-sales`, `erp-accounting`, `erp-frontend`, `erp-web`).
-  * Configuración de `Cargo.toml` raíz con edición 2024 / Rust 1.99+ y perfiles de optimización.
-  * *Entregable:* Workspace ejecutable con `cargo check` y `clippy` limpios.
+El entorno de ejecución es Fedora Rawhide con Podman standard; el marco normativo lo conforman la Norma de Información Financiera venezolana (VEN-NIF) con el SENIAT (Providencia SNAT/2011/00071, IGTF, retenciones de IVA e ISLR, tasas del BCV); el frontend es Leptos SSR puro con cero JavaScript; y las dependencias son 100% Rust, sin librerías nativas de C o C++.
 
-* **F1-02 (L) — Capa de Persistencia `erp-db` & SurrealDB 3.x en Podman:**
-  * Scripting y ejecución de SurrealDB local usando Podman en Fedora.
-  * Sistema de migraciones idempotentes `.surql` embebidas con `rust-embed`.
-  * Esquema base `SCHEMAFULL` para usuarios, sesiones, empresas e historial de tasas BCV.
-  * *Entregable:* `erp-db` ejecutando consultas parametrizadas y aplicando esquema al iniciar.
+## 1. Backlog detallado por fases (F1 a F6)
 
-* **F1-03 (L) — Crate `erp-core`: Tipos de Dominio, VEN-NIF Money y Errores:**
-  * Tipo `Money` con centavos en `i64`, código ISO 4217 (`VES`, `USD`) y operaciones exactas con `rust_decimal`.
-  * Estructura RIF venezolano (`V-`, `J-`, `G-`, `E-`, `P-`) con algoritmo de cálculo/validación de dígito verificador.
-  * *Entregable:* Suite de pruebas unitarias con `proptest` para invarianza de redondeo y validación RIF.
+Cada fase acumula la anterior; los tamaños entre paréntesis guían el dimensionamiento del sprint: S equivale a 1 día, M a 2 o 3 días, L a 4 o 7 días y XL a más de 8 días de esfuerzo.
 
-* **F1-04 (L) — Autenticación Segura (`erp-auth`):**
-  * Hashing de contraseñas con `argon2id` (configuración ajustada a estándares OWASP 2026).
-  * Generación de tokens de sesión con `getrandom` (256-bit entropy) y almacenamiento de Hash SHA-256 en SurrealDB.
-  * Cookies HTTP-Only, Secure, SameSite=Lax manejadas desde Axum.
-  * *Entregable:* Handlers de login, logout, registro y recuperación con flujo PRG (Post-Redirect-Get).
+### Fase 1: base e infraestructura core
 
-* **F1-05 (M) — Vistas SSR con Leptos & Layout CSS Artesanal:**
-  * Layout maestro HTML5 con Leptos SSR (CERO JS, sin `HydrationScripts`).
-  * Estilos CSS artesanales con Design Tokens (CSS Variables) para modo claro/oscuro vía `:root` y `prefers-color-scheme`.
-  * *Entregable:* Páginas de Login/Registro respondiendo HTML nativo estilizado.
+En esta fase estableces el Cargo Workspace, la base de datos SurrealDB en Podman, las migraciones idempotentes, la arquitectura hexagonal y el flujo completo de autenticación con cookies seguras y SSR.
 
----
+- **F1-01 (M): configuración del workspace y toolchain en Fedora Rawhide.**
+  - Creas la estructura multi-crate (`erp-core`, `erp-auth`, `erp-admin`, `erp-db`, `erp-inventory`, `erp-sales`, `erp-purchasing`, `erp-accounting`, `erp-frontend`, `erp-web`).
+  - Configuras el `Cargo.toml` raíz con edición 2024, Rust 1.99+ y perfiles de optimización.
+  - Entregable: workspace ejecutable con `cargo check` y `cargo clippy` limpios.
+- **F1-02 (L): capa de persistencia `erp-db` y SurrealDB 3.x en Podman.**
+  - Scripting y ejecución de SurrealDB local con Podman en Fedora.
+  - Sistema de migraciones idempotentes `.surql` embebidas con `rust-embed`.
+  - Esquema base `SCHEMAFULL` para usuarios, sesiones, empresas e historial de tasas BCV.
+  - Entregable: `erp-db` ejecutando consultas parametrizadas y aplicando el esquema al inicio.
+- **F1-03 (L): crate `erp-core`, tipos de dominio, Money VEN-NIF y errores.**
+  - Tipo `Money` con centavos en `i64`, código ISO 4217 (`VES`, `USD`) y operaciones exactas con `rust_decimal`.
+  - Estructura del RIF venezolano (`V-`, `J-`, `G-`, `E-`, `P-`) con cálculo y validación del dígito verificador.
+  - Entregable: suite de pruebas unitarias con `proptest` para la invariancia de redondeo y la validación de RIF.
+- **F1-04 (L): autenticación segura (`erp-auth`).**
+  - Hash de contraseñas con Argon2id (configuración ajustada a los estándares de OWASP 2026).
+  - Tokens de sesión con `getrandom` (entropía de 256 bits) y almacenamiento del hash SHA-256 en SurrealDB.
+  - Cookies `httpOnly`, `Secure` y `SameSite=Lax` emitidas por Axum.
+  - Entregable: handlers de inicio de sesión, cierre, registro y recuperación con el flujo PRG (post-redirect-get).
+- **F1-05 (M): vistas SSR con Leptos y layout CSS artesanal.**
+  - Layout maestro HTML5 con Leptos SSR (cero JavaScript, sin `HydrationScripts`).
+  - Estilos CSS artesanales con tokens de diseño (variables CSS) para modo claro y oscuro vía `:root` y `prefers-color-scheme`.
+  - Entregable: páginas de inicio de sesión y registro respondiendo HTML nativo estilizado.
 
-### FASE 2: RBAC, MULTI-TENANCY & AUDITORÍA EN GRAFO
-*Objetivo:* Garantizar el aislamiento estricto por empresa (*Tenant*) e implementar matriz de roles, permisos y logs de auditoría inmutables.
+### Fase 2: RBAC, multi-tenancy y auditoría en grafo
 
-* **F2-01 (L) — Aislamiento Multi-tenancy en `erp-db`:**
-  * Contexto de sesión en Axum que inyecta `tenant_id` (Company ID) en el Request Extensions.
-  * Wrapper en `erp-db` que adjunta automáticamente `tenant_id` en cada consulta `SELECT`, `CREATE`, `UPDATE` o `RELATE`.
-  * *Entregable:* Pruebas de integración HTTP verificando que el Tenant A no puede acceder a datos del Tenant B bajo ningún escenario.
+En esta fase garantizas el aislamiento por empresa (tenant) e implementas la matriz de roles, permisos y logs de auditoría inmutables.
 
-* **F2-02 (L) — Matriz RBAC (Roles & Permisos):**
-  * Definición de roles (`Owner`, `Administrador`, `Contador`, `Vendedor`, `Almacenista`).
-  * Uso de relaciones de Grafo en SurrealDB (`user -> HAS_ROLE -> role -> CAN_ACCESS -> permission`).
-  * Middleware en Axum (`RbacGuard`) para proteger rutas según el módulo y acción.
-  * *Entregable:* Acceso denegado (HTTP 403 / Redirección) para usuarios sin el permiso requerido.
+- **F2-01 (L): aislamiento multi-tenant en `erp-db`.**
+  - Contexto de sesión en Axum que inyecta `tenant_id` (Company ID) en las extensiones del request.
+  - Wrapper en `erp-db` que adjunta automáticamente el `tenant_id` a cada `SELECT`, `CREATE`, `UPDATE` o `RELATE`.
+  - Entregable: pruebas de integración HTTP que verifican que el tenant A no accede a los datos del tenant B en ningún escenario.
+- **F2-02 (L): matriz RBAC (roles y permisos).**
+  - Definición de roles (`Owner`, `Administrador`, `Contador`, `Vendedor`, `Almacenista`).
+  - Relaciones de grafo en SurrealDB: `user -> HAS_ROLE -> role -> CAN_ACCESS -> permission`.
+  - Middleware `RbacGuard` en Axum para proteger rutas según módulo y acción.
+  - Entregable: acceso denegado (HTTP 403 o redirección) para usuarios sin el permiso requerido.
+- **F2-03 (M): registro de auditoría inmutable (`audit_log`).**
+  - Aristas de grafo `RELATE user->EXECUTED->audit_log` para toda mutación de estado.
+  - Captura de dirección IP (respetando el proxy), marca UTC, tabla afectada, payload e identificador del tenant.
+  - Entregable: registro automático de auditoría en cada `POST` de la aplicación.
+- **F2-04 (S): rate limiter y protección contra fuerza bruta.**
+  - Middleware de Tower en Axum que mitiga ataques de fuerza bruta en `/login` (bloqueo por IP y usuario tras 5 intentos fallidos).
+  - Entregable: prueba de integración que verifica la respuesta HTTP 429 y el bloqueo de cuenta.
 
-* **F2-03 (M) — Registro de Auditoría Inmutable (`audit_log`):**
-  * Creación de aristas de grafo `RELATE user->EXECUTED->audit_log` para toda mutación de estado.
-  * Captura de dirección IP (respetando proxy), timestamp UTC, tabla afectada, payload e ID del Tenant.
-  * *Entregable:* Registro automático de auditoría en cada POST de la aplicación.
+### Fase 3: inventario, almacenes y kardex (valoración VEN-NIF)
 
-* **F2-04 (S) — Rate Limiter y Anti-Brute Force:**
-  * Middleware Tower en Axum para mitigar ataques de fuerza bruta en `/login` (bloqueo por IP y usuario tras 5 intentos fallidos).
-  * *Entregable:* Test de integración verificando respuesta HTTP 429 / Cuenta Bloqueada.
+En esta fase gestionas existencias multi-almacén con valoración conforme a la NIC 2 y al VEN-NIF (FIFO y promedio ponderado AVCO).
 
----
+- **F3-01 (M): almacenes y registro de productos.**
+  - ABM (alta, baja y modificación) de almacenes y productos con unidades de medida, categorías, códigos de barra y alícuotas de IVA aplicables.
+  - Entregable: formularios SSR para la gestión de productos y stock mínimo.
+- **F3-02 (L): movimientos de inventario y grafo de trazabilidad.**
+  - Relación `RELATE warehouse->HAS_STOCK->product` con control de lote y fecha de vencimiento.
+  - Movimientos inmutables: entradas, salidas, transferencias y ajustes vía transacciones ACID en SurrealDB.
+  - Entregable: invariante de stock: el sistema rechaza el stock negativo salvo configuración explícita.
+- **F3-03 (L): algoritmos de valoración FIFO y promedio ponderado (AVCO).**
+  - Implementación en `erp-inventory` del cálculo del costo de ventas e inventario final conforme a la NIC 2.
+  - Entregable: kardex auditable por producto con reconstrucción histórica del costo.
 
-### FASE 3: INVENTARIO, ALMACENES & KARDEX (VALORACIÓN VEN-NIF)
-*Objetivo:* Gestión de existencias multi-almacén con valoración de inventarios bajo NIC 2 / VEN-NIF (FIFO / Promedio Ponderado AVCO).
+### Fase 4: ventas, facturación del SENIAT, cobranza y pagos
 
-* **F3-01 (M) — Almacenes y Registro de Productos:**
-  * ABM de Almacenes y Productos con unidades de medida, categorías, códigos de barra y alícuotas de IVA aplicables.
-  * *Entregable:* Formularios SSR para gestión de productos y stock mínimo.
+En esta fase implementas el ciclo completo de ventas ajustado a la legislación fiscal venezolana vigente (SENIAT, IGTF e imprenta digital o control fiscal), y añades las extensiones de cobranza (CxC), pagos (CxP), compras y tesorería.
 
-* **F3-02 (L) — Movimientos de Inventario y Grafo de Trazabilidad:**
-  * Relación `RELATE warehouse->HAS_STOCK->product` con control de lote y fecha de vencimiento.
-  * Movimientos inmutables: Entradas, Salidas, Transferencias e Ajustes vía transacciones ACID en SurrealDB.
-  * *Entregable:* Invariante de stock: Prohibido stock negativo a menos que esté explícitamente configurado.
+- **F4-01 (M): directorio de clientes y configuración fiscal.**
+  - Registro de clientes con RIF y condición IVA (Contribuyente Ordinario, Formal o Sujeto Pasivo Especial (SPE)).
+  - Entregable: formulario de clientes con validación de RIF y estatus de retención.
+- **F4-02 (L): máquina de estados de cotización a pedido a factura.**
+  - Flujo de estados con transiciones validadas en el dominio.
+  - Control de series y números de control fiscal del SENIAT por empresa (ejemplo `00-000001`).
+  - Entregable: conversión de cotizaciones a facturas manteniendo la trazabilidad.
+- **F4-03 (L): motor fiscal venezolano (IVA, IGTF y tasa BCV).**
+  - Cálculo de IVA: 16% general, 8% reducida y bienes exentos.
+  - Cálculo de IGTF con alícuota configurable para pagos en moneda extranjera.
+  - Imputación de la tasa de cambio oficial del BCV del día con captura del historial.
+  - Entregable: desglose fiscal exacto en la factura con montos expresados en bolívares (VES) y dólares (USD).
+- **F4-04 (M): plantilla de impresión fiscal (HTML y CSS con `@media print`).**
+  - Vista de factura imprimible conforme a la Providencia SNAT/2011/00071.
+  - Entregable: vista en el navegador que produce una impresión impecable con Ctrl+P, sin JavaScript.
+- **F4-05 (L): cuentas por cobrar (CxC) y gestión de deudores.**
+- **F4-06 (L): compras, abastecimiento y facturación de proveedores.**
+- **F4-07 (L): cuentas por pagar (CxP) con retenciones fiscales.**
+- **F4-08 (L): tesorería y flujo de caja.**
 
-* **F3-03 (L) — Algoritmos de Valoración FIFO y Promedio Ponderado (AVCO):**
-  * Implementación en `erp-inventory` de cálculo de costo de ventas e inventario final conforme a NIC 2.
-  * *Entregable:* Kardex auditable por producto con reconstrucción histórica del costo.
+### Fase 5: contabilidad bimoneda en partida doble (VEN-NIF)
 
----
+En esta fase construyes el sistema contable en partida doble con reexpresión bimoneda (VES/USD), la integración automática desde ventas e inventario y los estados financieros. Además agregas a contabilidad los activos fijos, los presupuestos, los centros de costo y el BI.
 
-### FASE 4: VENTAS, FACTURACIÓN SENIAT & IGTF
-*Objetivo:* Ciclo completo de ventas adaptado a la legislación fiscal venezolana vigente (SENIAT, IGTF, Imprenta Digital / Control Fiscal).
+- **F5-01 (L): plan de cuentas y estructura VEN-NIF.**
+  - Plan de cuentas parametrizable: Activo, Pasivo, Patrimonio, Ingresos, Costos, Gastos y Cuentas de Orden.
+  - Jerarquía multinivel y marcas de operabilidad.
+  - Entregable: árbol contable renderizado con HTML native (`<details>` y `<summary>`).
+- **F5-02 (XL): motor de asientos contables inmutables e integración automática.**
+  - Garantía de partida doble en el dominio: la suma de los débitos es igual a la suma de los créditos, exacta en centavos.
+  - Asientos automáticos desde ventas (cuentas por cobrar, IVA débito fiscal, ventas, IGTF) y movimientos de inventario.
+  - Entregable: asientos generados atómicamente en la misma transacción de la venta o del movimiento.
+- **F5-03 (L): libros contables y balances bimoneda.**
+  - Reportes: libro diario, libro mayor, balance de comprobación (sumas y saldos), estado de resultados y balance general.
+  - Ajuste por diferencia de cambio conforme a la NIC 21 y al BA VEN-NIF 2.
+  - Entregable: consultas analíticas en SurrealDB con respuesta inferior a 200 ms.
+- **F5-04 (L): integración contable de CxC.**
+- **F5-05 (L): integración contable de CxP con retenciones.**
+- **F5-06 (L): integración contable de tesorería.**
+- **F5-07 (L): activos fijos y depreciación.**
+- **F5-08 (M): presupuestos y control presupuesto vs. real.**
+- **F5-09 (M): centros de costo y proyectos.**
+- **F5-10 (M): BI y reportes gerenciales.**
 
-* **F4-01 (M) — Directorio de Clientes y Configuración Fiscal:**
-  * Registro de Clientes con RIF, condición IVA (Contribuyente Ordinario, Formal, Sujeto Pasivo Especial - SPE).
-  * *Entregable:* Formulario de clientes con validación RIF y estatus de retención.
+### Fase 6: endurecimiento, seguridad en reposo y extensibilidad
 
-* **F4-02 (L) — Máquina de Estados: Cotización → Pedido → Factura:**
-  * Flujo de estados con transiciones estrictas y validación en el dominio.
-  * Control de Series y Números de Control Fiscal SENIAT por empresa (ej. `00-000001`).
-  * *Entregable:* Conversión de cotizaciones a facturas manteniendo trazabilidad.
+En esta fase aseguras el sistema ante auditorías, implementas cifrado defensivo, pruebas de estrés, respaldos y las integraciones externas (API, importaciones, CRM avanzado, notificaciones).
 
-* **F4-03 (L) — Motor Fiscal Venezolano (IVA, IGTF & Tasa BCV):**
-  * Cálculo de IVA (16% General, 8% Reducida, Exento).
-  * Cálculo de IGTF (alícuota configurable para pagos en moneda extranjera/divisas).
-  * Imputación de tasa de cambio oficial BCV del día con captura de historial.
-  * *Entregable:* Desglose fiscal exacto en la factura con montos expressados en Bolívares (VES) y Dólares (USD).
+- **F6-01 (M): cifrado en reposo y gestión de secretos.**
+  - Cifrado de campos sensibles (datos bancarios, tokens de integración) con `chacha20poly1305` o `aes-gcm`.
+  - Limpieza de claves criptográficas en memoria con `zeroize` y `secrecy`.
+  - Entregable: datos en reposo ilegibles ante un volcado de la base de datos.
+- **F6-02 (M): infraestructura TLS nativa y contenedor Podman.**
+  - Configuración de Axum con `rustls` (sin OpenSSL nativo en C).
+  - `Podmanfile` multi-stage optimizado para Fedora Rawhide, con la ejecución standard de Podman.
+  - Entregable: imagen de Podman lista para producción, operable con `podman run` en modo estándar.
+- **F6-03 (L): batería de pruebas guardián "cero JavaScript", cobertura y carga.**
+  - Cobertura de 85% o más en módulos de dominio validada con `cargo-llvm-cov`.
+  - Pruebas de estrés con `oha` contra los handlers del servidor.
+  - Prueba sintáctica automatizada que valida la ausencia total de `<script` y `on*=` en el HTML de salida.
+  - Entregable: reportes de rendimiento con p95 inferior a 200 ms y cero hallazgos en `cargo audit`.
+- **F6-04 (M): API e integraciones externas.**
+- **F6-05 (M): CRM avanzado y oportunidades.**
+- **F6-06 (M): notificaciones y alertas.**
+- **F6-07 (L): importaciones y aduanas (opcional).**
 
-* **F4-04 (M) — Plantilla de Impresión Fiscal HTML+CSS (@media print):**
-  * Vista de factura imprimible que cumple con la Providencia SNAT/2011/00071.
-  * *Entregable:* Vista accesible en navegador que genera PDF impecable al presionar "Imprimir" (Ctrl+P) sin necesidad de JavaScript.
+## 2. Definition of Done (DoD)
 
----
+El DoD define los criterios de cierre: el global aplica a todas las fases, y el específico valida el cierre de cada fase.
 
-### FASE 5: CONTABILIDAD BICONTABLE DOBLE (VEN-NIF)
-*Objetivo:* Sistema contable en partida doble con reexpresión bimoneda (VES/USD), integración automática desde ventas e inventario, y estados financieros.
+### DoD global
 
-* **F5-01 (L) — Plan de Cuentas y Estructura VEN-NIF:**
-  * Plan de cuentas parametrizable (Activo, Pasivo, Patrimonio, Ingresos, Costos, Gastos, Cuentas de Orden).
-  * Múltiples niveles de jerarquía y marcas de operabilidad.
-  * *Entregable:* Arbol contable renderizado vía HTML nativo (`<details>/<summary>`).
-
-* **F5-02 (XL) — Motor de Asientos Contables Inmutables & Integración Automática:**
-  * Garantía de Partida Doble en el dominio: $\sum \text{Débitos} = \sum \text{Créditos}$ exacto en centavos.
-  * Generación automática de asientos contables desde Ventas (Cuentas por Cobrar, IVA Débito Fiscal, Ventas, IGTF) y Movimientos de Inventario.
-  * *Entregable:* Asientos contables generados atómicamente en la misma transacción de la venta o movimiento.
-
-* **F5-03 (L) — Libros Contables y Balances Bimoneda:**
-  * Reportes: Libro Diario, Libro Mayor, Balance de Comprobación (Sumas y Saldos), Estado de Resultados y Balance General.
-  * Ajuste por Diferencia de Cambio conforme a NIC 21 / BA VEN-NIF 2.
-  * *Entregable:* Consultas analíticas en SurrealDB con respuestas en < 200 ms.
-
----
-
-### FASE 6: ENDURECIMIENTO, SEGURIDAD EN REPOSO & PRUEBAS DE CARGA
-*Objetivo:* Asegurar el sistema ante auditorías de seguridad, implementar cifrado defensivo, pruebas de estrés y backups automatizados en Podman.
-
-* **F6-01 (M) — Cifrado en Reposo y Gestión de Secretos:**
-  * Cifrado de campos sensibles (datos bancarios, tokens de integración) usando `chacha20poly1305` / `aes-gcm`.
-  * Limpieza de claves criptográficas en memoria usando `zeroize` y `secrecy`.
-  * *Entregable:* Datos en reposo ilegibles en caso de volcado de la base de datos.
-
-* **F6-02 (M) — Infraestructura TLS Nativa y Contenedor Podman:**
-  * Configuración de Axum con `rustls` (CERO OpenSSL nativo C).
-  * `Podmanfile` multi-stage build optimizado en Fedora Rawhide con usuario no root.
-  * *Entregable:* Imagen de Podman lista para producción ejecutando en entornos rootless.
-
-* **F6-03 (L) — Batería de Pruebas "Guardián Cero JS", Cobertura y Carga:**
-  * Ejecución de `cargo-llvm-cov` para validar cobertura $\ge 85\%$ en módulos de dominio.
-  * Pruebas de estrés con `oha` contra los handlers del servidor.
-  * Test sintáctico automatizado que valida la ausencia total de `<script` y `on*=` en la salida HTML.
-  * *Entregable:* Reportes de rendimiento p95 < 200 ms y cero hallazgos en `cargo audit`.
-
----
-
-## 2. DEFINITION OF DONE (DoD)
-
-### DoD Global (Aplica a todas las fases):
-1. **Compilación Limpia:** `cargo check` y `cargo build --release` finalizan sin advertencias (*zero warnings*).
-2. **Linter Estricto:** `cargo clippy -- -D warnings` se ejecuta sin ningún hallazgo.
+1. **Compilación limpia:** `cargo check` y `cargo build --release` finalizan sin advertencias (zero warnings).
+2. **Lint limpio:** `cargo clippy -- -D warnings` finaliza sin ningún hallazgo.
 3. **Formato:** `cargo fmt --check` valida la conformidad con las reglas del workspace.
 4. **Seguridad:** `cargo audit` reporta cero vulnerabilidades en el árbol de dependencias.
-5. **Cero C/C++:** Verificación de que no existan librerías enlazadas dinámicamente mediante C-FFI o `sys-crates` con código C.
-6. **Guardián Cero JS:** Batería de pruebas HTTP que confirma que el 100% del HTML servido no contiene scripts ni atributos de eventos dinámicos.
-7. **Multi-Tenancy:** Pruebas de integración confirman aislamiento completo por `tenant_id`.
+5. **Sin C/C++:** verificación de que no existan librerías enlazadas dinámicamente mediante C-FFI o `sys-crates` con código C.
+6. **Guardián cero JavaScript:** batería de pruebas HTTP que confirma que el 100% del HTML servido no contiene scripts ni atributos de eventos dinámicos.
+7. **Multi-tenancy:** pruebas de integración que confirman el aislamiento completo por `tenant_id`.
 
-### DoD por Fase:
-* **Fase 1:** Contenedor de SurrealDB corriendo en Podman, migraciones aplicadas correctamente, login/logout funcional con cookies seguras `httpOnly` y prueba de integración de auth en verde.
-* **Fase 2:** Matriz RBAC verificada con test unitarios; `audit_log` registrando eventos en grafo de SurrealDB.
-* **Fase 3:** Kardex de inventario cuadrado con valoración FIFO/AVCO; cero posibilidad de stock negativo no autorizado.
-* **Fase 4:** Factura SENIAT emitida con número de control correlativo, cálculo exacto de IVA e IGTF, e impresión CSS lista.
-* **Fase 5:** Invariante de partida doble comprobado ($\sum \text{Débitos} = \sum \text{Créditos}$); asientos automáticos generados atómicamente.
-* **Fase 6:** Cobertura de código $\ge 85\%$ en dominio, `oha` reporta p95 < 200 ms, y contenedor Podman ejecutable de forma autónoma.
+### DoD por fase
 
----
+- **Fase 1:** contenedor de SurrealDB corriendo en Podman, migraciones aplicadas, inicio y cierre de sesión con cookies seguras `httpOnly` y pruebas de integración de auth en verde.
+- **Fase 2:** matriz RBAC verificada con pruebas unitarias y `audit_log` registrando eventos en el grafo de SurrealDB.
+- **Fase 3:** kardex de inventario cuadrado con valoración FIFO o AVCO y stock negativo bloqueado salvo configuración.
+- **Fase 4:** factura del SENIAT emitida con número de control correlativo, desglose exacto de IVA e IGTF e impresión CSS lista; pagos de CxC, CxP y movimientos de tesorería con asientos automáticos.
+- **Fase 5:** invariante de partida doble verificado (la suma de los débitos es igual a la suma de los créditos), asientos automáticos atómicos, libros bimoneda y reexpresión NIC 29 verificada.
+- **Fase 6:** cobertura de 85% o más en dominio, `oha` reporta p95 inferior a 200 ms y el contenedor de Podman ejecuta el sistema de forma autónoma.
 
-## 3. MATRIZ DE RIESGOS TÉCNICOS Y DE PRODUCTO
+## 3. Matriz de riesgos técnicos y de producto
+
+La matriz prioriza las mitigaciones; cada riesgo cubre el impacto y la medida correctiva concreta.
 
 | Riesgo | Tipo | Impacto | Mitigación |
 | :--- | :--- | :--- | :--- |
-| **Complejidad de Interfaz sin JS** | Técnico | Alto | Utilizar de forma intensiva componentes HTML5 semánticos (`<details>`, `<dialog>`, inputs nativos) y estados CSS (`:checked`, `:target`). Redirecciones PRG para refrescar estado desde servidor. |
-| **Rendimiento SSR en consultas complejas** | Técnico | Medio | Optimizar consultas e índices SCHEMAFULL en SurrealDB. Aprovechar Tokio async y almacenamiento en memoria para sesiones activas. |
-| **Volatilidad en normativa fiscal Venezolana** | Producto | Alto | Aislar la lógica fiscal (alícuotas de IVA, IGTF, formatos SENIAT) en configuraciones del Tenant en la base de datos, evitando hardcodear valores en el dominio. |
-| **Diferencias de Redondeo en Moneda Bimoneda (VES/USD)** | Técnico | Crítico | Representar todos los montos en `i64` (centavos) y usar `rust_decimal` para las tasas de cambio. Queda prohibido el uso de flotantes `f32`/`f64`. |
-| **Aislamiento Multi-tenant deficiente** | Seguridad | Crítico | Implementar wrappers obligatorios en la capa de persistencia `erp-db` que inyecten el `tenant_id` en cada consulta, respaldado por pruebas de integración automatizadas. |
+| Complejidad de interfaz sin JavaScript | Técnico | Alto | Intensificas el uso de HTML5 semántico (`<details>`, `<dialog>` e inputs nativos), estados CSS (`:checked`, `:target`) y redirecciones PRG para refrescar el estado desde el servidor. |
+| Rendimiento SSR en consultas complejas | Técnico | Medio | Optimizas consultas e índices `SCHEMAFULL` en SurrealDB; aprovechas Tokio async y la memoria para las sesiones activas. |
+| Volatilidad de la normativa fiscal venezolana | Producto | Alto | Aíslas la lógica fiscal (alícuotas de IVA, IGTF y formatos del SENIAT) en la configuración del tenant en la base de datos, sin valores fijados en el código del dominio. |
+| Diferencias de redondeo en bimoneda (VES/USD) | Técnico | Crítico | Representas todos los montos en `i64` (centavos) y usas `rust_decimal` para las tasas de cambio; el dominio excluye los flotantes `f32` y `f64` para montos monetarios. |
+| Aislamiento multi-tenant deficiente | Seguridad | Crítico | Implementas wrappers en `erp-db` que inyectan el `tenant_id` en cada consulta, con pruebas de integración automatizadas. |
 
----
+## 4. Decisiones de negocio
 
-## 4. DECISIONES ABIERTAS Y REQUERIMIENTOS DE APROBACIÓN
+Las tres open questions del backlog quedan resueltas; cada decisión adopta su opción elegida y queda registrada como un ADR (sección 6).
 
-1. **Gestión de Tasas de Cambio BCV:**  
-   * *Propuesta:* Módulo de actualización manual diaria por el usuario administrador o carga vía tarea programada (*cron* interno en Rust) que consuma el API/sitio oficial del BCV.
+1. **Gestión de tasas de cambio BCV (DEC-001): opción híbrida.** El job programado (tokio-cron a las 10:00) realiza el consumo del sitio oficial del BCV cada día, el administrador corrige manualmente (overrides) cuando corresponde, el sistema alerta si falla la carga y registra la auditoría completa de cada cambio. Detalle en el ADR-007.
+2. **Facturación impresa y electrónica (DEC-002): opción dual.** El formato HTML imprimible con CSS de impresión es el requisito vigente, y la exportación JSON/UBL 2.1 (Universal Business Language) queda configurable por tenant para los proveedores autorizados (FacturaYa, Sovos). Detalle en el ADR-008.
+3. **Reexpresión por inflación (DEC-003): opción híbrida con motor.** El administrador carga el INPC mensual con validación, y el motor de reexpresión automático aplica la NIC 29 completa: coeficientes, clasificación monetaria, ajuste de patrimonio, resultado por posición monetaria y revelaciones. Detalle en el ADR-009.
 
-2. **Facturación Electrónica / Imprenta Digital SENIAT:**  
-   * *Propuesta:* Generación de formato impreso fiscal estándar y archivo XML/JSON exportable conforme a las normativas de proveedores autorizados de imprenta digital en Venezuela.
+## 5. Revisión de especificaciones clave y límites de SurrealDB
 
-3. **Manejo de Reexpresión por Inflación (BA VEN-NIF 7 / NIC 29):**  
-   * *Propuesta:* Módulo para la carga mensual del INPC (Índice de Precios al Consumidor) del BCV para habilitar la reexpresión de estados financieros a moneda constante cuando la empresa lo requiera.
+Estas notas de revisión guían el uso de SurrealDB para ajustar la implementación a sus límites reales.
 
----
-
-## 5. REVISIÓN DE ESPECIFICACIONES CLAVE Y LÍMITES DE SURREALDB
-
-* **Transacciones ACID:** En SurrealDB, las transacciones a través de bloques `BEGIN TRANSACTION ... COMMIT TRANSACTION` garantizan atomicidad en escrituras de múltiples tablas (asientos contables + balance + inventario).
-* **Uso del Grafo (`RELATE`):** Se utilizará para rastrear auditoría (`user->EXECUTED->audit_log`) y trazabilidad de productos (`warehouse->HAS_STOCK->product`), manteniendo las consultas de contabilidad en estructuras tabulares SCHEMAFULL con índices para máxima velocidad.
-* **Consultas Parametrizadas:** Todo el código en `erp-db` hará uso de bindings del SDK oficial de Rust para prevenir cualquier tipo de inyección SurQL.
-
----
-
-¿Aprobamos el plan y pasamos a la Fase 1?
+- **Transacciones ACID:** los bloques `BEGIN TRANSACTION` y `COMMIT TRANSACTION` garantizan la atomicidad de las escrituras en múltiples tablas (asientos contables, balances e inventario).
+- **Uso del grafo (`RELATE`):** el sistema emplea el grafo para trazar la auditoría (`user->EXECUTED->audit_log`) y la trazabilidad de productos (`warehouse->HAS_STOCK->product`), y mantiene las consultas de contabilidad en estructuras tabulares `SCHEMAFULL` con índices para la máxima velocidad.
+- **Consultas parametrizadas:** el código de `erp-db` usa los bindings del SDK oficial de Rust para impedir la inyección de SurQL.
