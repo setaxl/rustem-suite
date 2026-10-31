@@ -284,6 +284,64 @@ Los ejemplos de este módulo viven en el apéndice de ejemplos (sección 24), ya
 
 El glosario (sección 25) define: aging, pronto pago, interés moratorio, diferencia de cambio de la cartera, conciliación bancaria, plan de cuotas, sub-ledger, provisión de cobros dudosos y factoring.
 
+## 9. Cuentas por pagar (CxP)
+
+La gestión de proveedores replica el nivel de detalle de CxC e incorpora las retenciones fiscales propias de las compras.
+
+### 9.1 Alcance: mismo nivel de detalle que CxC
+
+La tabla consolida las decisiones de alcance adoptadas para CxP.
+
+| Aspecto | Decisión |
+| :--- | :--- |
+| Detalle de pagos | Total por factura y desglose por línea de factura (simétrico a CxC) |
+| Métodos de pago | Los mismos de CxC, configurables por tenant |
+| Cuotas y financiamiento | Contado, crédito a días fijos, cuotas fijas y plan personalizado |
+| Integración bancaria | Registro manual e importación de extractos en CSV o Excel |
+| Reporte fiscal | Dashboard interno, libro VEN-NIF formal de CxP y exportación CSV o JSON para auditoría |
+| Retenciones | IVA (75% o 100% para el SPE), ISLR según tarifa e IGTF en pagos en divisas |
+| Verificación de compras | Verificación cruzada de los 3 documentos (three-way matching): orden, recepción y factura |
+
+### 9.2 Modelo de datos
+
+Las entidades del sub-ledger de proveedores residen en `erp-core` y se materializan en migraciones `SCHEMAFULL`:
+
+- `Supplier` (proveedor): RIF, razón social, condiciones de pago por defecto, cuenta contable por defecto y retenciones aplicables (IVA, ISLR, IGTF).
+- `PurchaseOrder` (orden de compra): proveedor, fecha, líneas (producto, cantidad, precio e IVA) y estado (borrador, enviada, parcial, recibida, facturada o cerrada).
+- `GoodsReceipt` (recepción de mercancía): orden, fecha, almacén, líneas con cantidad real, lote y vencimiento, y estado.
+- `SupplierInvoice` (factura de proveedor): orden o recepción de origen, proveedor, fecha, vencimiento, número de control fiscal, líneas, IVA, retenciones y `status_cxp` (pendiente, parcial, pago, vencido, anulado o disputado).
+- `SupplierPayment` (pago al proveedor): tenant, proveedor, fecha, monto, moneda, tasa, método, referencia y estado.
+- `SupplierPaymentAllocation` (aplicación de pago): pago, factura de proveedor, monto aplicado y fecha.
+- `WithholdingVoucher` (comprobante de retención): factura, tipo (IVA o ISLR), base, porcentaje, monto, número correlativo, fecha y estado.
+
+### 9.3 Funcionalidades por fase
+
+**Fase 4 (compras y pagos):**
+
+- Modelo de datos en `erp-core` y migraciones con grafos `RELATE supplier->HAS_PO->purchase_order`, `purchase_order->HAS_RECEIPT->goods_receipt` y `goods_receipt->HAS_INVOICE->supplier_invoice`.
+- Ciclo completo: orden de compra, recepción (parcial o total) y factura de proveedor con verificación cruzada de los 3 documentos (three-way matching).
+- Retenciones automáticas de IVA, ISLR e IGTF al registrar la factura, con generación de comprobantes correlativos.
+- Registro de pagos multi-método con aplicación automática o manual a facturas (FIFO por vencimiento más prioridad manual).
+- Condiciones de pago por proveedor, descuento por pronto pago e interés moratorio.
+- Importación de extractos bancarios con coincidencia sugerida para pagos a proveedores.
+- Dashboard de CxP: aging de proveedores, próximos vencimientos y flujo de caja de salidas proyectado.
+- Reportes: CxP por proveedor, aging, retenciones generadas, comprobantes y diferencia de cambio.
+
+**Fase 5 (contabilidad):**
+
+- Asientos automáticos: factura de proveedor (débito `61xx` más `2407`, crédito `2105`), pago (débito `2105`, crédito `1101`), retención de IVA (débito `2105`, crédito `2409`), retención de ISLR (débito `2105`, crédito `2410`) y diferencia de cambio (`5115`).
+- Sub-ledger de proveedores sincronizado con el invariante: la suma de los saldos de proveedores es igual al saldo de la cuenta `2105`.
+- Libro VEN-NIF formal de CxP y comprobantes de retención de IVA e ISLR en el formato del SENIAT.
+- Exportación de auditoría en CSV o JSON con el esquema documentado.
+
+### 9.4 Criterios de aceptación
+
+> **Criterios de aceptación (CxP):** `cargo test cxp::three_way_matching` (CXP-01) detecta el faltante de 5 unidades en una orden de 100; `cargo test cxp::withholding_calc` (CXP-02) calcula la retención de 120 sobre una factura de 1000 con IVA de 160 para un SPE (75%), y la retención de ISLR del 2% (20); `cargo test cxp::payment_allocation` (CXP-03) aplica el pago de 5000 a 3 facturas por FIFO; `cargo test cxp::ven_nif_report` (CXP-04) valida las columnas del libro y los comprobantes; `cargo test cxp::subledger_invariance` (CXP-05) cuadra el sub-ledger contra la cuenta `2105` al centavo.
+
+### 9.5 Ejemplos y términos
+
+Los ejemplos del módulo viven en el apéndice (sección 24), y el glosario (sección 25) define: verificación cruzada de 3 documentos, comprobante de retención, retención de IVA a proveedores SPE y costo landed de importaciones.
+
 ## 22. Estrategia de pruebas
 
 La estrategia de pruebas protege los invariantes del negocio; cada capa verifica un aspecto distinto del sistema.

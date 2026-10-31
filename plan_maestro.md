@@ -109,6 +109,13 @@ En esta fase implementas el ciclo completo de ventas ajustado a la legislación 
   - Entregable: CxC operativo con aging correcto, pagos aplicados y reportes conforme al VEN-NIF.
 - **F4-06 (L): compras, abastecimiento y facturación de proveedores.**
 - **F4-07 (L): cuentas por pagar (CxP) con retenciones fiscales.**
+  - Modelo de datos CxP en `erp-core` con migraciones y grafos `RELATE supplier->HAS_PO->purchase_order` y `goods_receipt->HAS_INVOICE->supplier_invoice`.
+  - Registro de pagos multi-método con aplicación FIFO por vencimiento y prioridad manual.
+  - Retenciones automáticas de IVA (75% o 100% para el SPE), ISLR e IGTF, con comprobantes correlativos.
+  - Condiciones de pago por proveedor, pronto pago e interés moratorio.
+  - Importación de extractos bancarios con coincidencia sugerida.
+  - Dashboard de CxP: aging de proveedores, próximos vencimientos y flujo de salidas proyectado.
+  - Entregable: ciclo de pagos a proveedores operativo con retenciones comprobables ante el SENIAT.
 - **F4-08 (L): tesorería y flujo de caja.**
 
 ### Fase 5: contabilidad bimoneda en partida doble (VEN-NIF)
@@ -134,6 +141,10 @@ En esta fase construyes el sistema contable en partida doble con reexpresión bi
   - Libro VEN-NIF de CxC formal y exportación de auditoría en CSV y JSON.
   - Entregable: sub-ledger cuadrado al centavo, asientos atómicos y reportes fiscales listos.
 - **F5-05 (L): integración contable de CxP con retenciones.**
+  - Asientos automáticos: factura de proveedor (débito `61xx` más `2407`, crédito `2105`), pago (débito `2105`, crédito `1101`), retenciones (`2409` IVA, `2410` ISLR) y diferencia de cambio (`5115`).
+  - Sub-ledger de proveedores con invariante: la suma de los saldos de proveedores es igual al saldo de la cuenta `2105` del mayor.
+  - Libro VEN-NIF de CxP formal y comprobantes de retención en formato SENIAT.
+  - Entregable: sub-ledger cuadrado al centavo, comprobantes correlativos y exportación de auditoría lista.
 - **F5-06 (L): integración contable de tesorería.**
 - **F5-07 (L): activos fijos y depreciación.**
 - **F5-08 (M): presupuestos y control presupuesto vs. real.**
