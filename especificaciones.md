@@ -1224,6 +1224,69 @@ pub async fn consulta_registros(
 
 Los 20 archivos responden a la estructura de la sección 6.1, y los comandos `cargo check` y `cargo test` los validan al integrarlos al workspace.
 
+## 25. Glosario fiscal y contable
+
+El glosario reúne 34 entradas sobre la normativa venezolana e internacional aplicada al ERP; cada una trae definición, referencia legal y su uso dentro del sistema. Sirve a las dos audiencias: quién programa y quién audita.
+
+### 25.1 Marco tributario del SENIAT
+
+| Término | Definición | Referencia legal | Uso en el ERP |
+| :--- | :--- | :--- | :--- |
+| IVA | Impuesto al valor agregado por ventas gravadas: 16% general, 8% reducida y 15% suntuaria, con bienes exentos y no sujetos | Código Orgánico Tributario y providencias del SENIAT | Motor fiscal (sección 3.2), facturación y retenciones (secciones 8 y 9) |
+| IGTF | Impuesto a las grandes transacciones financieras en pagos en divisas, efectivo o criptoactivos | Ley de IGTF y providencia del SENIAT vigente | Alícuota configurable en facturación (sección 3.2) |
+| ISLR | Impuesto sobre la renta con retenciones de origen a proveedores | Ley de ISLR y su reglamento | Retención en CxP y comprobante correlativo (sección 9) |
+| SPE | Sujeto pasivo especial, con obligaciones reforzadas de emisión y calidad de agente de retención | Normativa del SENIAT vigente | Retención del 75% o 100% en CxP y marcación en facturación (secciones 8 y 9) |
+| RIF | Registro Único de Información Fiscal: identificador tributario con prefijos `V-`, `J-`, `G-`, `E-` y `P-` | Norma G2000 del SENIAT | Validación de clientes y proveedores y datos del emisor en la factura |
+| Número de control | Correlativo fiscal de cada documento emitido, con serie y formato de control | Providencia SNAT/2011/00071 del SENIAT | Numeración y vista de factura (secciones 3.2 y 4) |
+| Comprobante de retención | Documento que formaliza la retención de IVA o ISLR, con correlativo anual o mensual | RG 18 y providencias del SENIAT | Generación en CxP (sección 9.3) |
+
+### 25.2 Marco contable y tasas del BCV
+
+| Término | Definición | Referencia legal | Uso en el ERP |
+| :--- | :--- | :--- | :--- |
+| VEN-NIF | Norma de información financiera venezolana: variante GE para grandes entidades y PYME para el resto | FCPCP (Federación de Colegios de Contadores Públicos de Venezuela) | Configuración contable por tenant (sección 3.1) |
+| Bimoneda | Registro en moneda de cuenta legal (VES) junto con la moneda funcional (USD o EUR) | BA VEN-NIF 2 y NIC 21 | Libros y asientos en ambas monedas (sección 3.1) |
+| Moneda funcional | Moneda del entorno económico primario del tenant, USD o EUR cuando corresponde | NIC 21 y BA VEN-NIF 2 | Configuración del tenant y conversión de valores |
+| NIC 2 | Norma internacional de contabilidad de inventarios y valoración | NIC/NIIF adoptadas y su BA VEN-NIF | FIFO y AVCO del inventario (Fase 3) |
+| NIC 16 | Norma de propiedad, planta y equipo, con depreciación y revaluación | NIC/NIIF adoptadas | Activos fijos (sección 11) |
+| NIC 21 | Norma de los efectos de las variaciones en las tasas de cambio de la moneda extranjera | NIC y BA VEN-NIF 2 | Diferencia de cambio en la cuenta 5115 (secciones 8 y 9) |
+| NIC 29 | Norma de contabilidad en hiperinflación, con reexpresión a moneda constante | NIC y BA VEN-NIF 7 | Motor de reexpresión (sección 3.3) |
+| Tasa BCV oficial | Tasa de cambio publicada cada día por el Banco Central de Venezuela para VES/USD | Publicaciones del BCV | Historial de tasas (sección 3.2) y facturación |
+| INPC | Índice Nacional de Precios al Consumidor, publicado mensualmente por el BCV | Publicaciones del BCV | Carga mensual y coeficientes del motor (sección 3.3) |
+| Reexpresión | Ajuste de saldos a moneda de poder adquisitivo constante, con coeficientes del INPC | NIC 29 y BA VEN-NIF 7 | Motor automático (secciones 3.3 y 24.4) |
+| Cuenta monetaria / no monetaria | Clasificación NIC 29: los saldos monetarios (efectivo, bancos, cartera) no se reexpresan y los no monetarios (inventario, inmuebles, patrimonio) sí | NIC 29 | Clasificación y ajuste en el motor (sección 3.3) |
+| Resultado por posición monetaria | Ganancia o pérdida del poder adquisitivo de la reexpresión, reconocida en el estado de resultados | NIC 29 | Línea de PyG y revelación en notas (sección 3.3) |
+
+### 25.3 Cuentas por cobrar y cobranza
+
+| Término | Definición | Referencia legal | Uso en el ERP |
+| :--- | :--- | :--- | :--- |
+| CxC | Cuentas por cobrar de ventas a crédito, con factura, vencimiento y saldo pendiente | Práctica contable del VEN-NIF | Sub-ledger de clientes y cuenta 1105 (sección 8) |
+| Aging | Antigüedad de los saldos vencidos, en buckets de 0 a 30, 31 a 60, 61 a 90 y más de 90 días | Práctica comercial | Dashboard y provisión (sección 8) |
+| Pronto pago | Descuento al cliente que paga antes del vencimiento | Condición comercial pactada | Asiento 5110 del descuento (sección 8.3) |
+| Interés moratorio | Cargo adicional por pago pactado y aún en mora | Código de Comercio venezolano | Asiento 4210 (secciones 8.3 y 9.3) |
+| Conciliación bancaria | Igualación del extracto bancario contra el libro, con ajuste por diferencias | Práctica contable | Módulo de tesorería (sección 10) |
+| Sub-ledger | Libro auxiliar de clientes o proveedores, cuadrado contra la cuenta mayor | Práctica contable | Invariantes CXC-06 y CXP-05 (sección 23) |
+| Provisión de cobros dudosos | Estimación de pérdidas por cartera incobrable, por buckets | NIC 9 y VEN-NIF | Política por bucket y gasto (sección 8) |
+| Factoring | Cesión de créditos a un factor, con endoso y notificación al deudor | Práctica comercial | Contabilización en la cartera (sección 8) |
+
+### 25.4 Proveedores, compras e importaciones
+
+| Término | Definición | Referencia legal | Uso en el ERP |
+| :--- | :--- | :--- | :--- |
+| CxP | Cuentas por pagar a proveedores, con ciclo de orden, recepción y factura | Práctica contable del VEN-NIF | Sub-ledger de proveedores y cuenta 2105 (sección 9) |
+| Verificación cruzada de los 3 documentos | Control de orden, recepción y factura antes de aprobar el pago | Práctica de compras | Matching del módulo de compras (sección 14) |
+| DAU | Declaración aduanera: documento con el que el agente declara la mercancía importada, con valoración, arancel y gravámenes | Ley Orgánica de Aduanas | Módulo de importaciones (sección 15) |
+| LI | Licencia de importación con cupo en USD y fecha de vencimiento | Normativa de comercio exterior | Gestión de cupos (sección 15) |
+| Costo landed | Costo total de la mercancía hasta su llegada: valor CIF, arancel, IVA de importación, IGTF y gastos | NIC 2 (inventarios) | Valoración del inventario importado (sección 15) |
+
+### 25.5 Indicadores
+
+| Término | Definición | Referencia legal | Uso en el ERP |
+| :--- | :--- | :--- | :--- |
+| DSO | Días promedio de cobro: antigüedad media de la cartera por cobrar | Práctica financiera | Reporte de BI (sección 19) |
+| DPO | Días promedio de pago: antigüedad media de la deuda por pagar | Práctica financiera | Reporte de BI (sección 19) |
+
 ## 26. Plan del proyecto y reglas de trabajo
 
 El proyecto avanza en fases acumulativas; esta sección resume la ruta y fija las reglas transversales de cumplimiento para cada tarea.
