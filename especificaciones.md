@@ -274,7 +274,7 @@ Las entidades del sub-ledger de clientes residen en `erp-core` y se materializan
 
 ### 8.4 Criterios de aceptación
 
-> **Criterios de aceptación (CxC):** `cargo test cxc::aging` (CXC-01) valida el aging de 1000 facturas mixtas; `cargo test cxc::payment_allocation` (CXC-02) aplica el pago de 5000 a 3 facturas por FIFO; `cargo test cxc::installments` (CXC-03) calcula el plan de 12 cuotas de 1000 con interés del 2% (total 12240); `cargo test cxc::bank_import` (CXC-04) importa un CSV de 500 líneas con 480 coincidencias automáticas; `cargo test cxc::ven_nif_report` (CXC-05) valida las columnas del libro oficial; `cargo test cxc::subledger_invariance` (CXC-06) cuadra el sub-ledger contra la cuenta `1105` al centavo; `cargo test cxc::multi_currency` (CXC-07) contabiliza la diferencia de cambio de una factura de 1000 USD pagada al 36.55.
+> **Criterios de aceptación (CxC):** `cargo test cxc::aging` (CXC-01) valida el aging de 1.000 facturas mixtas; `cargo test cxc::payment_allocation` (CXC-02) aplica el pago de 5.000 a 3 facturas por FIFO; `cargo test cxc::installments` (CXC-03) calcula el plan de 12 cuotas de 1.000 con interés del 2% (total 12.240); `cargo test cxc::bank_import` (CXC-04) importa un CSV de 500 líneas con 480 coincidencias automáticas; `cargo test cxc::ven_nif_report` (CXC-05) valida las columnas del libro oficial; `cargo test cxc::subledger_invariance` (CXC-06) cuadra el sub-ledger contra la cuenta `1105` al centavo; `cargo test cxc::multi_currency` (CXC-07) contabiliza la diferencia de cambio de una factura de 1.000 USD pagada al 36.55.
 
 ### 8.5 Ejemplos ejecutables
 
@@ -336,7 +336,7 @@ Las entidades del sub-ledger de proveedores residen en `erp-core` y se materiali
 
 ### 9.4 Criterios de aceptación
 
-> **Criterios de aceptación (CxP):** `cargo test cxp::three_way_matching` (CXP-01) detecta el faltante de 5 unidades en una orden de 100; `cargo test cxp::withholding_calc` (CXP-02) calcula la retención de 120 sobre una factura de 1000 con IVA de 160 para un SPE (75%), y la retención de ISLR del 2% (20); `cargo test cxp::payment_allocation` (CXP-03) aplica el pago de 5000 a 3 facturas por FIFO; `cargo test cxp::ven_nif_report` (CXP-04) valida las columnas del libro y los comprobantes; `cargo test cxp::subledger_invariance` (CXP-05) cuadra el sub-ledger contra la cuenta `2105` al centavo.
+> **Criterios de aceptación (CxP):** `cargo test cxp::three_way_matching` (CXP-01) detecta el faltante de 5 unidades en una orden de 100; `cargo test cxp::withholding_calc` (CXP-02) calcula la retención de 120 sobre una factura de 1.000 con IVA de 160 para un SPE (75%), y la retención de ISLR del 2% (20); `cargo test cxp::payment_allocation` (CXP-03) aplica el pago de 5.000 a 3 facturas por FIFO; `cargo test cxp::ven_nif_report` (CXP-04) valida las columnas del libro y los comprobantes; `cargo test cxp::subledger_invariance` (CXP-05) cuadra el sub-ledger contra la cuenta `2105` al centavo.
 
 ### 9.5 Ejemplos y términos
 
@@ -445,7 +445,7 @@ El módulo de presupuestos compara el plan aprobado contra la ejecución real y 
 
 - Carga del presupuesto de forma manual o por importación de Excel con plantilla.
 - Ejecución automática mensual desde la contabilidad, más el comprometido desde órdenes y pedidos.
-- Alertas automáticas por umbral, con notificación de la alerta a los responsables por la sección 18 (notificaciones).
+- Alertas automáticas por umbral, con notificación de la alerta a los responsables vía la sección 18 (notificaciones).
 - Reportes: presupuesto contra real (variación en monto y porcentaje), tendencia mensual, alertas activas y proyección del cierre.
 
 ### 12.4 Criterios de aceptación
@@ -733,7 +733,7 @@ Los 37 criterios consolidan las decisiones de negocio y los módulos; cada uno p
 | Código | Prueba | Resultado esperado |
 | :--- | :--- | :--- |
 | TSY-01 | `cargo test treasury::bank_reconciliation` | Un CSV de 200 líneas concilia 180 automáticas, 15 sugeridas y deja 5 sin coincidencia |
-| TSY-02 | `cargo test treasury::cash_flow_projection` | Con cobros de 50M, pagos de 30M e impuestos de 5M, el flujo neto a 30 días es 15M |
+| TSY-02 | `cargo test treasury::cash_flow_projection` | Con cobros de 50 M, pagos de 30 M e impuestos de 5 M, el flujo neto a 30 días es 15 M |
 | TSY-03 | `cargo test treasury::daily_position` | Los saldos contables cuadran con el banco más los ítems de conciliación pendientes |
 | TSY-04 | `cargo test treasury::check_lifecycle` | Cada estado del cheque (emisión, depósito, cobro o rechazo) genera su asiento |
 
@@ -753,7 +753,7 @@ Los 37 criterios consolidan las decisiones de negocio y los módulos; cada uno p
 | BUD-01 | `cargo test budget::execution_auto` | Los asientos del mes actualizan la ejecución del presupuesto |
 | BUD-02 | `cargo test budget::alerts` | El gasto al 90% genera la alerta ámbar y la notifica al responsable |
 | CC-01 | `cargo test cost_center::allocation` | Un asiento de 10.000 se imputa 60% en `CC01` y 40% en `CC02` |
-| CC-02 | `cargo test project::profitability` | Ingresos de 100M, costos directos de 60M e indirectos de 20M arrojan un margen de 20M |
+| CC-02 | `cargo test project::profitability` | Ingresos de 100 M, costos directos de 60 M e indirectos de 20 M arrojan un margen de 20 M |
 | PRC-01 | `cargo test procurement::pr_to_po` | La solicitud aprobada genera la orden con los mismos datos |
 | PRC-02 | `cargo test procurement::three_way_match` | Orden de 100, recibo de 95 y factura de 95 aprueban con 5 unidades pendientes |
 | PRC-03 | `cargo test procurement::inventory_integration` | La recepción aprobada registra la entrada del kardex |
@@ -1297,7 +1297,7 @@ El glosario reúne 38 entradas sobre la normativa venezolana e internacional apl
 | INPC | Índice Nacional de Precios al Consumidor, publicado mensualmente por el BCV | Publicaciones del BCV | Carga mensual y coeficientes del motor (sección 3.3) |
 | Reexpresión | Ajuste de saldos a moneda de poder adquisitivo constante, con coeficientes del INPC | NIC 29 y BA VEN-NIF 7 | Motor automático (secciones 3.3 y 24.4) |
 | Cuenta monetaria / no monetaria | Clasificación NIC 29: los saldos monetarios (efectivo, bancos, cartera) no se reexpresan y los no monetarios (inventario, inmuebles, patrimonio) sí | NIC 29 | Clasificación y ajuste en el motor (sección 3.3) |
-| Resultado por posición monetaria | Ganancia o pérdida del poder adquisitivo de la reexpresión, reconocida en la línea del estado de resultados y en las notas | NIC 29 | Asiento del cierre (sección 3.3) |
+| Resultado por posición monetaria | Ganancia o pérdida por mantener la posición monetaria neta durante la reexpresión, reconocida en la línea del estado de resultados y en las notas | NIC 29 | Asiento del cierre (sección 3.3) |
 | Ganancia o pérdida del poder adquisitivo | El efecto total de la reexpresión NIC 29: la diferencia entre el ajuste de las cuentas no monetarias y el ajuste del patrimonio | NIC 29 y BA VEN-NIF 7 | Cálculo del motor y asiento de reexpresión (secciones 3.3 y 24.4) |
 
 ### 25.3 Cuentas por cobrar y cobranza
