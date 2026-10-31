@@ -162,7 +162,12 @@ En esta fase construyes el sistema contable en partida doble con reexpresión bi
   - Conciliación de depreciación fiscal (ley de ISLR) contra contable (NIC 16) con diferidos.
   - Inventario físico con planillas, conciliación y ajustes.
   - Entregable: registro de activos cuadrado entre cartera, mayor y diferidos fiscales.
-- **F5-08 (M): presupuestos y control presupuesto vs. real.**
+- **F5-08 (M): presupuestos y control presupuesto contra real.**
+  - Modelo de datos (`Budget`, `BudgetLine`, `BudgetExecution`, `BudgetAlert`) con migraciones y cargas manuales o por Excel.
+  - Ejecución automática mensual desde la contabilidad y compromiso desde órdenes y pedidos.
+  - Alertas por umbrales (ámbar 80%, rojo 100%) con notificación a los responsables.
+  - Reportes de variación en monto y porcentaje, tendencia y proyección de cierre.
+  - Entregable: los gerentes ven el desvío del presupuesto durante el mes, no al final.
 - **F5-09 (M): centros de costo y proyectos.**
 - **F5-10 (M): BI y reportes gerenciales.**
 

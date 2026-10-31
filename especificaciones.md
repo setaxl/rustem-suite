@@ -419,6 +419,41 @@ El módulo de activos fija la vida contable de los inmuebles y equipos, calcula 
 
 Los ejemplos del módulo viven en el apéndice (sección 24), y el glosario (sección 25) define vida útil, valor residual, superávit de revaluación y diferido fiscal.
 
+## 12. Presupuestos (presupuesto contra ejecución real)
+
+El módulo de presupuestos compara el plan aprobado contra la ejecución real y comprometida; alerta a los responsables antes del desvío, no después.
+
+### 12.1 Alcance
+
+| Aspecto | Decisión |
+| :--- | :--- |
+| Niveles | Empresa, centro de costo, proyecto y cuenta contable |
+| Periodicidad | Anual con desglose mensual, ajustes trimestrales y reapertura anual |
+| Tipos | Ingresos, gastos, inversiones (CapEx) y flujo de caja |
+| Alertas | Umbrales de desviación: ámbar al 80%, rojo al 100% y verde bajo 80% |
+| Versiones | Borrador, aprobado, ejecutando y cerrado, con histórico de versiones |
+| Integración | Real desde el libro mayor; comprometido desde órdenes y pedidos de CxC y CxP |
+
+### 12.2 Modelo de datos
+
+- `Budget` (presupuesto): nombre, año, versión, estado y aprobador.
+- `BudgetLine` (línea): presupuesto, cuenta contable, centro de costo, proyecto, mes y monto en la moneda del plan.
+- `BudgetExecution` (ejecución): cuenta, centro, proyecto, mes, monto real, comprometido y disponible.
+- `BudgetAlert` (alerta): línea, tipo (umbral de gasto o umbral de ingreso), porcentaje, fecha y estado de notificación.
+
+### 12.3 Funcionalidades (Fase 5 y Fase 6)
+
+- Carga del presupuesto de forma manual o por importación de Excel con plantilla.
+- Ejecución automática mensual desde la contabilidad, más el comprometido desde órdenes y pedidos.
+- Alertas automáticas por umbral con notificación de ello a los responsables (enlace a la sección 18, notificaciones).
+- Reportes: presupuesto contra real (variación en monto y porcentaje), tendencia mensual, alertas activas y proyección del cierre.
+
+### 12.4 Criterios de aceptación
+
+> **Criterios de aceptación (presupuestos):** `cargo test budget::execution_auto` (BUD-01) actualiza `BudgetExecution` al registrar los asientos del mes; `cargo test budget::alerts` (BUD-02) emite la alerta ámbar y notifica al responsable al llegar al 90% del gasto.
+
+Los ejemplos del módulo viven en el apéndice (sección 24).
+
 ## 22. Estrategia de pruebas
 
 La estrategia de pruebas protege los invariantes del negocio; cada capa verifica un aspecto distinto del sistema.
