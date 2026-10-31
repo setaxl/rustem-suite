@@ -180,6 +180,10 @@ En esta fase construyes el sistema contable en partida doble con reexpresión bi
   - Rentabilidad por proyecto y centro con prorrateo de indirectos.
   - Entregable: el reporte de rentabilidad muestra ingresos, costos y margen por área y por proyecto.
 - **F5-10 (M): BI y reportes gerenciales.**
+  - Paneles ejecutivos con indicadores clave de rendimiento (KPI) de ventas, cobranza, rentabilidad, caja e inventario, con profundización por niveles (drill down).
+  - Creador de reportes para usuarios no técnicos, con exportación a Excel, PDF, CSV y JSON, y envío programado por correo (sección 19 de `especificaciones.md`).
+  - Seguridad a nivel de fila por rol, centro de costo y proyecto.
+  - Entregable: la gerencia consulta ventas, cobranza, caja y rentabilidad en un panel, con datos del día.
 
 ### Fase 6: endurecimiento, seguridad en reposo y extensibilidad
 
@@ -199,9 +203,29 @@ En esta fase aseguras el sistema ante auditorías, implementas cifrado defensivo
   - Prueba sintáctica automatizada que valida la ausencia total de `<script` y `on*=` en el HTML de salida.
   - Entregable: reportes de rendimiento con p95 inferior a 200 ms y cero hallazgos en `cargo audit`.
 - **F6-04 (M): API e integraciones externas.**
+  - API REST sobre los recursos principales con CRUD, autenticación OAuth 2.0 y claves por tenant con permisos granulares (scopes).
+  - Webhooks por evento con entrega firmada y reintentos, más límite de tasa por clave y endpoint.
+  - Documentación OpenAPI 3.1 con interfaz embebida y generación de SDK (sección 17 de `especificaciones.md`).
+  - Entregable: un tercero integra ventas y pagos con su propia clave de API, sin ver los datos de otro tenant.
 - **F6-05 (M): CRM avanzado y oportunidades.**
+  - Prospectos con calificación y asignación, oportunidades con embudo, actividades de venta y versiones de cotización (sección 16 de `especificaciones.md`).
+  - Campañas de mercadeo con segmentación y registro de respuesta, territorios y metas por vendedor.
+  - Conversión de la oportunidad cerrada ganada a pedido de ventas con trazabilidad completa.
+  - Entregable: el vendedor sigue el embudo en el sistema, sin hojas de cálculo.
 - **F6-06 (M): notificaciones y alertas.**
+  - Canales: correo saliente (SMTP), notificación en la aplicación, webhook y SMS con proveedor configurable.
+  - Eventos por módulo: factura vencida, pago recibido, stock mínimo y alerta de presupuesto.
+  - Preferencias por usuario con horario de silencio y digest, plantillas por idioma, historial con estado y reintentos (sección 18 de `especificaciones.md`).
+  - Entregable: los avisos llegan por el canal correcto y quedan en historial auditado.
 - **F6-07 (L): importaciones y aduanas (opcional).**
+  - Licencias de importación con cupos y vencimientos, y declaración aduanera (DAU) con montos y tasa a la fecha de registro.
+  - Aranceles, IVA de importación, IGTF y gastos de llegada integrados al costo landed del producto.
+  - Inventario en tránsito por puerto o almacén fiscal hasta la recepción final (sección 15 de `especificaciones.md`).
+  - Entregable: la mercancía importada ingresa al inventario con su costo total documentado.
+
+### Fuera del alcance del MVP
+
+La nómina y la producción quedan fuera del núcleo del producto mínimo viable (MVP): la nómina integra proveedores especializados por la API externa, y la producción se integra con un sistema de ejecución de manufactura (MES); el detalle, con los modelos mínimos, vive en la sección 20 de `especificaciones.md`.
 
 ## 2. Definition of Done (DoD)
 

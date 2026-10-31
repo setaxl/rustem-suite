@@ -502,6 +502,180 @@ El ciclo de compras extiende CxP e inventario con solicitudes, órdenes, recepci
 
 Los ejemplos del módulo viven en el apéndice (sección 24).
 
+## 15. Importaciones y aduanas (opcional, Fase 6+)
+
+El módulo de importaciones cubre el ciclo aduanal cuando el negocio importa mercancías; activas el módulo por decisión del dueño del producto al cerrar la Fase 5, y la tabla fija su alcance.
+
+| Aspecto | Decisión |
+| :--- | :--- |
+| Licencia de importación (LI) | Número, fecha de emisión, fecha de vencimiento, cupo en USD y cupo usado |
+| Declaración aduanera (DAU) | Número, fecha de registro, proveedor, valor CIF (costo, seguro y flete), arancel, IVA de importación e IGTF |
+| Gastos de importación | Flete, seguro, agente, almacenaje y manipulación, integrados al costo landed del producto |
+| Tasa aduanera | La tasa del BCV a la fecha de registro de la DAU contra la del pago, con la diferencia de cambio contabilizada |
+| Inventario en tránsito | Control por puerto o almacén fiscal hasta la recepción final |
+
+La mercancía importada requiere su propio costo: el sistema suma el valor CIF, el arancel, el IVA de importación, el IGTF y los gastos de llegada (costo landed) para valorizar el inventario por su costo total, y la tasa del BCV a la fecha de registro de la DAU contra la del pago genera la diferencia de cambio que la sección 9.3 contabiliza.
+
+### 15.1 Modelo de datos
+
+- `ImportLicense` (licencia de importación): número, fecha de emisión, fecha de vencimiento, cupo en USD, cupo usado y estado.
+- `CustomsDeclaration` (declaración aduanera): licencia, número de DAU, fecha de registro, proveedor, total CIF en USD, arancel, IVA de importación, IGTF, tasa de la fecha de registro, gastos de importación en VES y costo landed en VES.
+- `InTransitInventory` (inventario en tránsito): declaración, producto, cantidad, ubicación (puerto o almacén fiscal) y fecha estimada de llegada.
+
+Los ejemplos del módulo viven en el apéndice (sección 24), y el glosario (sección 25) define DAU, costo landed e inventario en tránsito.
+
+## 16. Gestión de relaciones con clientes (CRM avanzado)
+
+El CRM amplía el cliente básico de la Fase 4 con el ciclo comercial completo; el embudo (pipeline) conecta la venta potencial del vendedor con la facturación del módulo de ventas.
+
+### 16.1 Alcance
+
+- Captura y calificación de prospectos (leads), con origen (formulario, campaña o referencia), puntaje de calificación (scoring) y asignación a vendedor.
+- Oportunidades con etapas del embudo (nueva, calificada, propuesta, negociación, cerrada ganada o cerrada perdida), monto estimado, probabilidad, fecha de cierre estimada y competidor.
+- Actividades de venta: llamadas, reuniones, correos, tareas y recordatorios, con resultado y próxima acción.
+- Versiones de cotización por oportunidad con comparación, historial y conversión a pedido.
+- Campañas de mercadeo con segmentación de clientes y registro de respuesta.
+- Territorios y equipos de venta con metas por vendedor y por equipo.
+
+### 16.2 Modelo de datos
+
+- `Lead` (prospecto): origen, datos de contacto, puntaje, estado y vendedor asignado.
+- `Opportunity` (oportunidad): prospecto o cliente, nombre, monto estimado, probabilidad, etapa, fecha de cierre estimada y competidor.
+- `Activity` (actividad): oportunidad o cliente, tipo, fecha, descripción, resultado y próxima acción.
+- `QuoteVersion` (versión de cotización): oportunidad, versión, fecha, líneas, total y estado (borrador, enviada, aceptada o rechazada).
+
+La oportunidad cerrada ganada crea el pedido de ventas con las líneas de la cotización aceptada, y hereda las mismas reglas fiscales del motor de facturación (secciones 3.2 y 4). Los ejemplos del módulo viven en el apéndice (sección 24).
+
+## 17. API externa e integraciones
+
+La API expone las operaciones del ERP a terceros con la misma seguridad interna: autenticas cada llamada, limitas la tasa y auditas cada mutación.
+
+### 17.1 Alcance
+
+- API REST sobre los recursos principales (clientes, proveedores, productos, facturas, pagos y asientos) con operaciones de creación, lectura, actualización y listado (CRUD).
+- Autenticación con OAuth 2.0 y claves de API por tenant con permisos granulares (scopes).
+- Webhooks de eventos (factura emitida, pago recibido, stock mínimo, factura vencida) con entrega por `POST` firmado, reintentos con espera progresiva (backoff) y registro de cada entrega.
+- Límite de tasa (rate limiting) por clave, endpoint y ventana de tiempo.
+- Documentación OpenAPI 3.1 con la interfaz de prueba embebida, y generación de clientes (SDK) para TypeScript, Rust o Python desde la especificación.
+- Cada respuesta respeta el aislamiento por tenant, y el versionado de la API lo fija la sección 21.3.
+
+### 17.2 Modelo de datos
+
+- `ApiKey` (clave de API): tenant, nombre, hash de la clave, permisos (scopes), límite de tasa en solicitudes por minuto, habilitación, vencimiento y hora del último uso.
+- `WebhookEndpoint` (endpoint de webhook): tenant, URL, lista de eventos, secreto de firma, habilitación y reintentos máximos.
+- `WebhookDelivery` (entrega de webhook): endpoint, evento, payload, código de respuesta, intentos y hora del próximo reintento.
+
+## 18. Notificaciones y alertas
+
+El módulo de notificaciones entrega cada evento del negocio por el canal correcto; los demás módulos notifican a través de esta sección.
+
+### 18.1 Alcance
+
+- Canales: correo saliente (SMTP), notificación dentro de la aplicación, webhook (sección 17) y mensaje corto (SMS) con proveedor configurable.
+- Eventos: factura vencida, pago recibido, stock mínimo, alerta de presupuesto (sección 12), importación de datos completada, respaldo completado y error del sistema.
+- Preferencias por usuario: canal, evento, horario de silencio y resumen diario o semanal (digest).
+- Plantillas con variables dinámicas e idiomas (español por defecto, inglés y portugués preparados) conforme a la internacionalización (i18n) de la sección 21.4.
+- Historial de entregas con estado (pendiente, enviada, fallida o leída) y reintento automático de las fallidas.
+
+### 18.2 Modelo de datos
+
+- `NotificationTemplate` (plantilla): código, nombre, canal, asunto, cuerpo de la plantilla e idioma.
+- `NotificationPreference` (preferencia): usuario, evento, canal, habilitación y horario (inicio y fin del silencio).
+- `Notification` (notificación): tenant, usuario, evento, canal, asunto, cuerpo, estado, hora de envío, hora de lectura e intentos.
+
+## 19. Inteligencia de negocios (BI)
+
+El BI convierte el dato operativo en decisión gerencial; los reportes aplican seguridad a nivel de fila (row-level security) según el rol, el centro de costo y el proyecto del usuario.
+
+### 19.1 Alcance
+
+- Paneles ejecutivos con indicadores clave de rendimiento (KPI: key performance indicators) de ventas, cobranza, rentabilidad, caja e inventario, con profundización por niveles (drill down).
+- Creador de reportes para usuarios no técnicos, con exportación a Excel, PDF, CSV y JSON, y envío programado por correo con adjuntos (diario, semanal o mensual) vía la sección 18.
+- Multi-moneda (VES, USD y EUR) con la tasa del BCV o la del mercado, seleccionable por reporte.
+- Seguridad a nivel de fila por rol, centro de costo y proyecto.
+
+### 19.2 Reportes clave
+
+- Ventas: por vendedor, producto, cliente, canal y región, con tendencia y ticket promedio.
+- Cobranza y pagos: aging, días promedio de cobro (DSO: days sales outstanding) y de pago (DPO: days payables outstanding), concentración de riesgo en los 10 mayores y efectividad de cobranza.
+- Inventario: rotación, antigüedad del stock, rupturas de stock, valoración FIFO y AVCO, y análisis ABC.
+- Financieros: flujo de caja, márgenes por línea, punto de equilibrio y comparativo del presupuesto (sección 12).
+- Fiscales: IVA de compras y ventas, retenciones, IGTF y libros fiscales del SENIAT.
+
+Los reportes consumen las vistas analíticas de la base y respetan los objetivos de latencia del SLA (sección 21.6).
+
+## 20. Fuera del alcance del MVP
+
+El MVP (producto mínimo viable) excluye dos dominios por decisión de producto; ambos quedan documentados con su integración prevista para que nadie los espere en el núcleo.
+
+- **Nómina y recursos humanos:** integras proveedores especializados por la API externa (sección 17); el modelo mínimo en `erp-core` mantiene al empleado básico para la imputación contable, por centro de costo y por proyecto, y los asientos de nómina llegan importados en CSV desde el proveedor. La tesorería completa la proyección con ese dato importado (sección 10.3).
+- **Producción y órdenes de trabajo:** la manufactura sale del núcleo mediante un módulo aparte o la integración con un sistema de ejecución de manufactura (MES); el modelo mínimo mantiene la orden de trabajo para el consumo de materiales hacia el inventario y la imputación de costos hacia la contabilidad.
+
+## 21. Aspectos transversales
+
+Las reglas de esta sección aplican a todos los módulos a la vez; los criterios de rendimiento (p95) complementan el objetivo general de la sección 22.
+
+### 21.1 Cifrado por entidad
+
+- Cifras en reposo con `aes-gcm` o `chacha20poly1305` los campos sensibles: usuario (hash de contraseña, correo y teléfono), cliente y proveedor (RIF y número de cuenta bancaria), cuenta bancaria (número de cuenta, clave SWIFT y token de la API del banco), pagos (referencia bancaria y token de tarjeta), claves de API (hash de la clave y secreto de firma del webhook), configuración fiscal (credenciales del proveedor de facturación) y `audit_log` (payload con datos personales).
+- La limpieza de memoria (`zeroize`) protege las claves en uso, y ningún secreto llega al disco sin cifrar.
+
+### 21.2 Auditoría de negocio
+
+- Auditas creación, modificación, anulación y cambio de estado en cada entidad maestra, además de impresiones y exportaciones sensibles, inicios de sesión y fallos, y cambios de la configuración fiscal.
+- Cada evento de auditoría guarda usuario, dirección IP de origen (con el proxy intermedio), user agent, marca UTC, entidad, identificador, acción, valores anteriores y nuevos, tenant e identificador de correlación del request.
+- La retención cubre 7 años (plazo de conservación fiscal), con traslado a almacenamiento frío después del primer año.
+
+### 21.3 Versionado
+
+- Versionado semántico (SemVer) en formato mayor.menor.parche para el producto y para cada crate.
+- Changelog en formato Keep a Changelog, generado desde los commits convencionales.
+- Migraciones de base numeradas (`001_` a `004_`), idempotentes y aplicadas al arranque (sección 24).
+- Versionado de la API con el encabezado `Accept: application/vnd.rustem.v1+json` y la ruta `/api/v1/`.
+
+### 21.4 Internacionalización (i18n)
+
+- Idiomas: español (por defecto), inglés y portugués, con claves de traducción (ejemplo `t!("invoice.created")`) y archivos por idioma (`.ftl` de Fluent o `.json`).
+- Fechas y números con `chrono`, zona `America/Caracas` por defecto y configurable por tenant.
+- Monedas con código ISO 4217 y formato conforme al idioma del usuario.
+
+### 21.5 Accesibilidad (WCAG 2.1 AA)
+
+- HTML semántico con landmarks, jerarquía de encabezados y etiquetas asociadas; los roles ARIA entran solo cuando el elemento nativo no basta.
+- El contraste llega a la relación 4.5 a 1 en texto y 3 a 1 en elementos grandes (hecho crítico de accesibilidad), verificado por los tokens de diseño.
+- Toda función opera con teclado (Tab, Enter, Esc y flechas), con foco visible con `:focus-visible`.
+- Los mensajes flash y las alertas usan `aria-live`, y las imágenes llevan texto alternativo (`alt`).
+- La batería de accesibilidad corre con `axe-core` en CI y con revisión manual de lectores de pantalla (NVDA y Orca).
+
+### 21.6 Rendimiento y acuerdos de servicio
+
+La tabla fija el objetivo de latencia p95, el rendimiento objetivo y las notas de cada módulo (SLA: service level agreement).
+
+| Módulo | Objetivo p95 | Rendimiento objetivo | Notas |
+| :--- | :--- | :--- | :--- |
+| Autenticación | 500 ms | 100 solicitudes por segundo | Límite de tasa activo |
+| Facturación | 800 ms | 50 solicitudes por segundo | Incluye la plantilla de impresión |
+| Paneles de CxC y CxP | 300 ms | 200 solicitudes por segundo | Cache del aging de 5 minutos |
+| Asientos contables | 200 ms | 500 solicitudes por segundo | Inserciones por lote |
+| Reportes gerenciales | 2 s | 10 solicitudes por segundo | Transmisión de CSV en flujo (streaming) |
+| Importación de CSV | 30 s por 10.000 filas | 5 trabajos concurrentes | Trabajo en segundo plano |
+
+### 21.7 Capacidad y escalabilidad
+
+| Límite | Valor | Estrategia |
+| :--- | :--- | :--- |
+| Tenants por instancia | 1.000 o más | Base compartida con aislamiento por `tenant_id` |
+| Usuarios concurrentes por tenant | 500 o más | Pool de conexiones y servicios sin estado |
+| Facturas por mes por tenant | 50.000 o más | Particionado por mes en SurrealDB |
+| Líneas por factura | 500 | Validación en el dominio y en la base |
+| Asientos por mes | 100.000 o más | Proceso por lotes e índices ajustados |
+
+### 21.8 Licenciamiento y tenancy comercial
+
+- Planes: Starter (1 empresa y 5 usuarios), Professional (5 empresas y 25 usuarios) y Enterprise (sin límite de empresas, un solo inicio de sesión (SSO) e integración por la API).
+- Módulos opcionales activables: activos fijos, presupuestos, CRM, importaciones y API.
+- Prueba de 30 días con todas las funciones; al vencer, el sistema baja al plan Starter y las notificaciones de la sección 18 lo comunican.
+
 ## 22. Estrategia de pruebas
 
 La estrategia de pruebas protege los invariantes del negocio; cada capa verifica un aspecto distinto del sistema.
