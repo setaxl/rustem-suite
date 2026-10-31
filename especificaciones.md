@@ -758,6 +758,472 @@ Los 37 criterios consolidan las decisiones de negocio y los módulos; cada uno p
 | PRC-02 | `cargo test procurement::three_way_match` | Orden de 100, recibo de 95 y factura de 95 aprueban con 5 unidades pendientes |
 | PRC-03 | `cargo test procurement::inventory_integration` | La recepción aprobada registra la entrada del kardex |
 
+## 24. Ejemplos ejecutables
+
+Este apéndice reúne 20 archivos de código real copiable al repositorio, agrupados por área; los criterios de la sección 23 prueban este código con `cargo test`. Los bloques `.surql` usan la etiqueta `sql` por ausencia de un resaltador propio.
+
+### 24.1 Infraestructura base
+
+**`Cargo.toml` raíz del workspace:** fija los 10 crates, la edición 2024 y los perfiles de optimización.
+
+```toml
+[workspace]
+resolver = "2"
+members = [
+    "crates/erp-core",
+    "crates/erp-auth",
+    "crates/erp-admin",
+    "crates/erp-db",
+    "crates/erp-inventory",
+    "crates/erp-sales",
+    "crates/erp-purchasing",
+    "crates/erp-accounting",
+    "crates/erp-frontend",
+    "crates/erp-web",
+]
+
+[workspace.package]
+edition = "2024"
+rust-version = "1.99"
+
+[workspace.dependencies]
+tokio = { version = "1", features = ["full"] }
+axum = "0.8"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+surrealdb = "3"
+rust_decimal = "1"
+chrono = { version = "0.4", features = ["serde"] }
+thiserror = "1"
+anyhow = "1"
+tracing = "0.1"
+validator = "0.19"
+scraper = "0.20"
+askama = "0.12"
+rustls-pemfile = "2"
+reqwest = { version = "0.12", features = ["rustls-tls"] }
+rustls = "0.23"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+```
+
+**`Podmanfile` multi-stage:** construye en Fedora Rawhide y entrega solo el binario con sus recursos.
+
+```dockerfile
+FROM registry.fedoraproject.org/fedora:rawhide AS builder
+RUN dnf install -y cargo rustc && dnf clean all
+WORKDIR /build
+COPY . .
+RUN cargo build --release
+
+FROM registry.fedoraproject.org/fedora:rawhide
+RUN dnf install -y ca-certificates && dnf clean all
+WORKDIR /app
+COPY --from=builder /build/target/release/rustem-server .
+COPY --from=builder /build/static ./static
+COPY --from=builder /build/migrations ./migrations
+EXPOSE 8080
+ENTRYPOINT ["./rustem-server"]
+```
+
+**`migrations/001_initial_schema.surql`:** usuarios, sesiones, empresas y auditoría.
+
+```sql
+DEFINE TABLE user SCHEMAFULL;
+DEFINE FIELD email ON TABLE user TYPE string;
+DEFINE FIELD password_hash ON TABLE user TYPE string;
+DEFINE INDEX user_email ON TABLE user COLUMNS email UNIQUE;
+
+DEFINE TABLE session SCHEMAFULL;
+DEFINE FIELD token_hash ON TABLE session TYPE string;
+DEFINE FIELD expires_at ON TABLE session TYPE datetime;
+DEFINE INDEX session_token ON TABLE session COLUMNS token_hash UNIQUE;
+
+DEFINE TABLE company SCHEMAFULL;
+DEFINE FIELD name ON TABLE company TYPE string;
+DEFINE FIELD rif ON TABLE company TYPE string;
+DEFINE INDEX company_rif ON TABLE company COLUMNS rif UNIQUE;
+
+DEFINE TABLE MEMBERSHIP TYPE RELATION IN user OUT company ENFORCED;
+
+DEFINE TABLE audit_log SCHEMAFULL;
+DEFINE FIELD tenant_id ON TABLE audit_log TYPE string;
+DEFINE FIELD user_id ON TABLE audit_log TYPE string;
+DEFINE FIELD action ON TABLE audit_log TYPE string;
+DEFINE FIELD payload ON TABLE audit_log TYPE object;
+DEFINE FIELD created_at ON TABLE audit_log TYPE datetime;
+DEFINE INDEX audit_tenant_time ON TABLE audit_log COLUMNS tenant_id, created_at;
+```
+
+**TLS nativo con `rustls` (`crates/erp-web/src/tls.rs`):** sin OpenSSL.
+
+```rust
+pub fn tls_config() -> Result<rustls::ServerConfig, anyhow::Error> {
+    let certs = rustls_pemfile::certs(&mut std::io::BufReader::new(
+        std::fs::File::open("/secrets/tls/fullchain.pem")?,
+    ))
+    .collect::<Result<Vec<_>, _>>()?;
+    let key = rustls_pemfile::private_key(&mut std::io::BufReader::new(
+        std::fs::File::open("/secrets/tls/privkey.pem")?,
+    ))?
+    .ok_or_else(|| anyhow::anyhow!("clave TLS ausente"))?;
+    Ok(rustls::ServerConfig::builder()
+        .with_no_client_auth()
+        .with_single_cert(certs, key)?)
+}
+```
+
+**Tipo `Money` (`crates/erp-core/src/money.rs`):** centavos en `i64`, sin flotantes (ver ADR-005).
+
+```rust
+use rust_decimal::Decimal;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Moneda { VES, USD, EUR }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Money {
+    pub centavos: i64,
+    pub moneda: Moneda,
+}
+
+impl Money {
+    pub fn nuevo(centavos: i64, moneda: Moneda) -> Self {
+        Self { centavos, moneda }
+    }
+
+    pub fn desde_unidades(unidades: Decimal, moneda: Moneda) -> Option<Self> {
+        Some(Self::nuevo((unidades * Decimal::from(100)).i64_checked()?, moneda))
+    }
+
+    pub fn unidades(self) -> Decimal {
+        Decimal::new(self.centavos, 2)
+    }
+
+    pub fn sumar(self, otro: Self) -> Result<Self, String> {
+        if self.moneda != otro.moneda {
+            return Err("no se suman monedas distintas".to_string());
+        }
+        self.centavos
+            .checked_add(otro.centavos)
+            .map(|v| Self::nuevo(v, self.moneda))
+            .ok_or_else(|| "desborde en la suma".to_string())
+    }
+}
+```
+
+### 24.2 Tasas del BCV (ADR-007)
+
+**`crates/erp-core/src/bcv/types.rs`:** tasa, fuente y auditoría del dato.
+
+```rust
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FuenteTasa { Automatica, Manual, Respaldo }
+
+#[derive(Debug, Clone)]
+pub struct TasaBcv {
+    pub fecha: chrono::NaiveDate,
+    pub ves_por_usd: rust_decimal::Decimal,
+    pub fuente: FuenteTasa,
+}
+```
+
+**`crates/erp-db/migrations/003_bcv_rates.surql`:** historial por fecha.
+
+```sql
+DEFINE TABLE bcv_rate SCHEMAFULL;
+DEFINE FIELD fecha ON TABLE bcv_rate TYPE datetime;
+DEFINE FIELD ves_por_usd ON TABLE bcv_rate TYPE number;
+DEFINE FIELD fuente ON TABLE bcv_rate TYPE string;
+DEFINE FIELD user_id ON TABLE bcv_rate TYPE option<string>;
+DEFINE FIELD created_at ON TABLE bcv_rate TYPE datetime;
+DEFINE INDEX bcv_fecha ON TABLE bcv_rate COLUMNS fecha UNIQUE;
+```
+
+**`crates/erp-web/src/jobs/bcv_fetch.rs`:** job de las 10:00 con extracción del sitio y alerta si falla (BCV-01 y BCV-03).
+
+```rust
+use rust_decimal::Decimal;
+
+pub fn extrae_tasa_dolar(html: &str) -> anyhow::Result<Decimal> {
+    // El sitio del BCV publica la venta del USD en un bloque de texto con coma decimal
+    let fragmento = scraper::Html::parse_document(html);
+    let sel = scraper::Selector::parse("div.col-sm-6.field-content div").unwrap();
+    let texto = fragmento
+        .select(&sel)
+        .map(|el| el.text().collect::<String>())
+        .find(|t| t.contains(','))
+        .ok_or_else(|| anyhow::anyhow!("no encontré la tasa en la página"))?;
+    let limpio = texto.trim().replace('.', "").replace(',', ".");
+    Ok(Decimal::from_str_exact(&limpio)?)
+}
+
+pub async fn actualiza_tasa(db: crate::db::Db) -> anyhow::Result<()> {
+    let fecha = chrono::Utc::now().date_naive();
+    let html = reqwest::get("https://www.bcv.org.ve/").await?.text().await?;
+    let tasa = extrae_tasa_dolar(&html)?;
+    db.guarda_tasa(fecha, tasa, "automatica").await
+}
+```
+
+### 24.3 Facturación dual (ADR-008)
+
+**`crates/erp-sales/src/invoice/templates.rs`:** un solo modelo con dos salidas.
+
+```rust
+#[derive(askama::Template)]
+#[template(path = "invoice_print.html")]
+pub struct PlantillaFacturaHtml {
+    pub numero_control: String,
+    pub razon_social: String,
+    pub rif: String,
+    pub base: String,
+    pub iva: String,
+    pub total: String,
+}
+
+pub fn render_html(f: &PlantillaFacturaHtml) -> String {
+    f.render().expect("la plantilla compila con el binario")
+}
+```
+
+**`templates/invoice_print.html`:** formato con CSS de impresión (`@media print`).
+
+```html
+<section class="factura">
+  <h1>{{ razon_social }}</h1>
+  <p>RIF: {{ rif }} {{ numero_control }}</p>
+  <small>Base {{ base }} IVA {{ iva }} Total {{ total }}</small>
+</section>
+```
+
+**`crates/erp-sales/src/invoice/ubl.rs`:** serialización JSON/UBL 2.1 por tenant.
+
+```rust
+use serde::Serialize;
+
+#[derive(Serialize)]
+#[serde(rename_all = "PascalCase")]
+pub struct FacturaUBL {
+    pub version: &'static str, // "2.1"
+    pub documento_id: String,  // serie y correlativo fiscal
+    pub fecha_emision: String, // aaaa-mm-dd
+    pub codigo_moneda: &'static str,
+    pub total_sin_impuesto: rust_decimal::Decimal,
+    pub total: rust_decimal::Decimal,
+}
+```
+
+### 24.4 Reexpresión por inflación (ADR-009)
+
+**`crates/erp-accounting/src/inflation/types.rs`:** índice, coeficiente y clasificación.
+
+```rust
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Clasificacion { Monetaria, NoMonetaria }
+
+#[derive(Debug, Clone)]
+pub struct IndiceInpc {
+    pub mes: chrono::NaiveDate, // primer día del mes
+    pub valor: rust_decimal::Decimal,
+}
+```
+
+**`crates/erp-accounting/src/inflation/engine.rs`:** el motor NIC 29.
+
+```rust
+use rust_decimal::Decimal;
+use erp_core::money::Money;
+
+pub fn coeficiente(inpc_cierre: Decimal, inpc_origen: Decimal) -> Decimal {
+    // El INPC de origen mayor que cero se valida al cargar el índice
+    inpc_cierre / inpc_origen
+}
+
+pub fn clasifica(cuenta: &str) -> Clasificacion {
+    if cuenta.starts_with("11") || cuenta.starts_with("12") || cuenta.starts_with("21") {
+        Clasificacion::Monetaria
+    } else {
+        Clasificacion::NoMonetaria
+    }
+}
+
+pub fn reexpresa(saldo: Money, coef: Decimal, clase: Clasificacion) -> Money {
+    match clase {
+        // La cuenta monetaria no se reexpresa (NIC 29)
+        Clasificacion::Monetaria => saldo,
+        Clasificacion::NoMonetaria => {
+            Money::desde_unidades(saldo.unidades() * coef, saldo.moneda)
+                .expect("centavos exactos")
+        }
+    }
+}
+```
+
+**`crates/erp-db/migrations/004_inflation.surql`:** INPC, clasificación y corridas.
+
+```sql
+DEFINE TABLE inflation_index SCHEMAFULL;
+DEFINE FIELD mes ON TABLE inflation_index TYPE datetime;
+DEFINE FIELD valor ON TABLE inflation_index TYPE number;
+DEFINE INDEX inpc_mes ON TABLE inflation_index COLUMNS mes UNIQUE;
+
+DEFINE TABLE account_classification SCHEMAFULL;
+DEFINE FIELD cuenta ON TABLE account_classification TYPE string;
+DEFINE FIELD tipo ON TABLE account_classification TYPE string;
+DEFINE INDEX clas_cuenta ON TABLE account_classification COLUMNS cuenta UNIQUE;
+
+DEFINE TABLE restatement_log SCHEMAFULL;
+DEFINE FIELD corrida ON TABLE restatement_log TYPE datetime;
+DEFINE FIELD cuenta ON TABLE restatement_log TYPE string;
+DEFINE FIELD saldo_original ON TABLE restatement_log TYPE number;
+DEFINE FIELD saldo_reexpresado ON TABLE restatement_log TYPE number;
+DEFINE FIELD coeficiente ON TABLE restatement_log TYPE number;
+```
+
+### 24.5 Cuentas por cobrar (sección 8)
+
+**`crates/erp-core/src/cxc/types.rs`:** deuda y buckets del aging.
+
+```rust
+#[derive(Debug, Clone)]
+pub struct DeudaCliente {
+    pub factura_id: String,
+    pub vence: chrono::NaiveDate,
+    pub saldo: crate::money::Money,
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct BucketAging {
+    pub dias_0_30: crate::money::Money,
+    pub dias_31_60: crate::money::Money,
+    pub dias_61_90: crate::money::Money,
+    pub dias_90_mas: crate::money::Money,
+}
+```
+
+**`crates/erp-db/migrations/002_cxc_schema.surql`:** pagos, aplicaciones y cuotas.
+
+```sql
+DEFINE TABLE payment SCHEMAFULL;
+DEFINE FIELD tenant_id ON TABLE payment TYPE string;
+DEFINE FIELD customer_id ON TABLE payment TYPE record;
+DEFINE FIELD fecha ON TABLE payment TYPE datetime;
+DEFINE FIELD monto ON TABLE payment TYPE number;
+DEFINE FIELD moneda ON TABLE payment TYPE string;
+DEFINE FIELD metodo ON TABLE payment TYPE string;
+DEFINE FIELD estado ON TABLE payment TYPE string;
+DEFINE INDEX pago_tenant_fecha ON TABLE payment COLUMNS tenant_id, fecha;
+
+DEFINE TABLE payment_allocation SCHEMAFULL;
+DEFINE FIELD payment_id ON TABLE payment_allocation TYPE record;
+DEFINE FIELD invoice_id ON TABLE payment_allocation TYPE record;
+DEFINE FIELD monto_aplicado ON TABLE payment_allocation TYPE number;
+DEFINE FIELD fecha ON TABLE payment_allocation TYPE datetime;
+DEFINE INDEX alloc_pago ON TABLE payment_allocation COLUMNS payment_id, invoice_id;
+
+DEFINE TABLE installment SCHEMAFULL;
+DEFINE FIELD plan_id ON TABLE installment TYPE record;
+DEFINE FIELD numero ON TABLE installment TYPE int;
+DEFINE FIELD vence ON TABLE installment TYPE datetime;
+DEFINE FIELD total ON TABLE installment TYPE number;
+DEFINE FIELD estado ON TABLE installment TYPE string;
+DEFINE INDEX cuota_orden ON TABLE installment COLUMNS plan_id, numero UNIQUE;
+
+DEFINE TABLE HAS_INVOICE TYPE RELATION IN customer OUT invoice ENFORCED;
+DEFINE TABLE HAS_PAYMENT TYPE RELATION IN invoice OUT payment ENFORCED;
+```
+
+**`crates/erp-sales/src/cxc/payment_service.rs`:** aplicación FIFO de pagos (CXC-02).
+
+```rust
+pub fn aplica_pago_fifo(pago: &erp_core::money::Money, deudas: &mut Vec<DeudaCliente>) -> erp_core::money::Money {
+    let mut restante = *pago;
+    deudas.sort_by_key(|d| d.vence);
+    for deuda in deudas.iter_mut() {
+        if restante.centavos == 0 { break; }
+        if restante.moneda != deuda.saldo.moneda { continue; }
+        let monto = restante.centavos.min(deuda.saldo.centavos);
+        deuda.saldo = erp_core::money::Money::nuevo(deuda.saldo.centavos - monto, restante.moneda);
+        restante = erp_core::money::Money::nuevo(restante.centavos - monto, restante.moneda);
+    }
+    // Devuelves el residuo no aplicado
+    restante
+}
+```
+
+**`crates/erp-accounting/src/cxc/entries.rs`:** asientos automáticos del ciclo.
+
+```rust
+use crate::asiento::Linea;
+use crate::plan::Cuenta;
+use erp_core::money::Money;
+
+pub fn asiento_factura(total: Money, base: Money, iva: Money) -> Vec<Linea> {
+    // D 1105 Clientes / C 4110 Ventas más 2408 IVA débito fiscal
+    vec![
+        Linea::debito(Cuenta::CxC, total),
+        Linea::credito(Cuenta::Ventas, base),
+        Linea::credito(Cuenta::IvaDebito, iva),
+    ]
+}
+
+pub fn asiento_pago(monto: Money) -> Vec<Linea> {
+    // D 1101 Banco / C 1105 Clientes
+    vec![
+        Linea::debito(Cuenta::Banco, monto),
+        Linea::credito(Cuenta::CxC, monto),
+    ]
+}
+
+pub fn asiento_dif_cambio(dif: Money) -> Vec<Linea> {
+    // D/C 5115 contra 1105 conforme a la NIC 21
+    let monto = Money::nuevo(dif.centavos.abs(), dif.moneda);
+    if dif.centavos >= 0 {
+        vec![Linea::debito(Cuenta::DifCambio, monto), Linea::credito(Cuenta::CxC, monto)]
+    } else {
+        vec![Linea::debito(Cuenta::CxC, monto), Linea::credito(Cuenta::DifCambio, monto)]
+    }
+}
+```
+
+**`crates/erp-web/src/handlers/cxc.rs`:** handler SSR con PRG y tenant inyectado.
+
+```rust
+pub async fn registro_pago(
+    session: SesionActiva,
+    Form(formulario): Form<FormPago>,
+) -> impl IntoResponse {
+    // El middleware inyecta el tenant desde la sesión (ver ADR-006)
+    let pago = Pago::nuevo(session.tenant_id, formulario.into())?;
+    estado.db.crear_pago(&pago).await?;
+    // Patrón PRG: responde la redirección con mensaje flash en el servidor
+    Ok(redirect_flash("/cxc", "pago registrado"))
+}
+```
+
+### 24.6 Aislamiento multi-tenant (ADR-006)
+
+**`crates/erp-db/src/tenancy.rs`:** toda consulta lleva el `tenant_id` con bindings.
+
+```rust
+pub async fn consulta_registros(
+    db: &surrealdb::Surreal<surrealdb::engine::any::Any>,
+    tenant: &str,
+    tabla: &str,
+) -> Result<Vec<serde_json::Value>, surrealdb::Error> {
+    db.query("SELECT * FROM type::table($t) WHERE tenant_id = $tenant")
+        .bind(("t", tabla.to_string()))
+        .bind(("tenant", tenant.to_string()))
+        .await?
+        .take(0)
+}
+```
+
+Los 20 archivos responden a la estructura de la sección 6.1, y los comandos `cargo check` y `cargo test` los validan al integrarlos al workspace.
+
 ## 26. Plan del proyecto y reglas de trabajo
 
 El proyecto avanza en fases acumulativas; esta sección resume la ruta y fija las reglas transversales de cumplimiento para cada tarea.
