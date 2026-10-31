@@ -477,6 +477,31 @@ La dimensión analítica habilita rentabilidad por área y por proyecto: imputa 
 
 Los ejemplos del módulo viven en el apéndice (sección 24).
 
+## 14. Compras y abastecimiento
+
+El ciclo de compras extiende CxP e inventario con solicitudes, órdenes, recepción con control de calidad y la verificación cruzada de los 3 documentos.
+
+### 14.1 Alcance
+
+- Catálogo por proveedor con productos, servicios, precios acordados y condiciones comerciales.
+- Solicitud de compra (PR: purchase requisition) con aprobación y conversión a orden.
+- Orden de compra (PO: purchase order) con envío al proveedor, seguimiento y recepción parcial o total.
+- Recepción de mercancía con control de calidad, lote, vencimiento y entrada automática al inventario.
+- Factura de proveedor con verificación cruzada de los 3 documentos (sección 9) y retenciones (sección 9.3).
+- Portal de proveedor opcional (Fase 6+): el proveedor consulta ordenes, carga facturas y revisa pagos.
+
+### 14.2 Modelo adicional al de CxP
+
+- `PurchaseRequisition` (solicitud): solicitante, centro de costo, líneas, aprobador y estado.
+- `PurchaseOrderLine` (línea de orden): producto, cantidad, precio, fecha de entrega esperada, cantidad recibida y facturada.
+- `QualityControl` (control de calidad): recepción, inspector, resultado (aprobado, rechazado o condicional) y observaciones.
+
+### 14.3 Criterios de aceptación
+
+> **Criterios de aceptación (compras):** `cargo test procurement::pr_to_po` (PRC-01) genera la orden con los datos de la solicitud aprobada; `cargo test procurement::three_way_match` (PRC-02) aprueba con orden de 100, recibo de 95 y factura de 95 (5 quedan pendientes de recepción); `cargo test procurement::inventory_integration` (PRC-03) registra la entrada del kardex al aprobar la recepción.
+
+Los ejemplos del módulo viven en el apéndice (sección 24).
+
 ## 22. Estrategia de pruebas
 
 La estrategia de pruebas protege los invariantes del negocio; cada capa verifica un aspecto distinto del sistema.
