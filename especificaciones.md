@@ -454,6 +454,29 @@ El módulo de presupuestos compara el plan aprobado contra la ejecución real y 
 
 Los ejemplos del módulo viven en el apéndice (sección 24).
 
+## 13. Centros de costo y proyectos
+
+La dimensión analítica habilita rentabilidad por área y por proyecto: imputa ingresos, costos y gastos más allá del plan de cuentas.
+
+### 13.1 Alcance
+
+- Centros de costo jerárquicos con estructura empresa, área y subárea.
+- Proyectos con fecha inicial y final, presupuesto y responsable.
+- Imputación analítica en asientos contables, facturas de venta y compra, nómina importada y depreciación.
+- Rentabilidad por proyecto y centro, con ingresos contra costos directos e indirectos prorrateados.
+
+### 13.2 Modelo de datos
+
+- `CostCenter` (centro de costo): código, nombre, padre (jerarquía), responsable, cuenta de control y estado.
+- `Project` (proyecto): código, nombre, fechas, presupuesto, centro asociado, responsable y estado.
+- `AnalyticAllocation` (asignación analítica): asiento o línea de factura, centro, proyecto, porcentaje y monto.
+
+### 13.3 Criterios de aceptación
+
+> **Criterios de aceptación (centros de costo):** `cargo test cost_center::allocation` (CC-01) imputa un asiento de 10.000 al 60% en `CC01` y al 40% en `CC02` con líneas analíticas correctas; `cargo test project::profitability` (CC-02) calcula el margen de 20 M para un proyecto con ingresos de 100 M, costos directos de 60 M e indirectos de 20 M.
+
+Los ejemplos del módulo viven en el apéndice (sección 24).
+
 ## 22. Estrategia de pruebas
 
 La estrategia de pruebas protege los invariantes del negocio; cada capa verifica un aspecto distinto del sistema.

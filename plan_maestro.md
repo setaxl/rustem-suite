@@ -169,6 +169,10 @@ En esta fase construyes el sistema contable en partida doble con reexpresión bi
   - Reportes de variación en monto y porcentaje, tendencia y proyección de cierre.
   - Entregable: los gerentes ven el desvío del presupuesto durante el mes, no al final.
 - **F5-09 (M): centros de costo y proyectos.**
+  - Modelo de datos (`CostCenter`, `Project`, `AnalyticAllocation`) con jerarquías y responsables.
+  - Imputación analítica en asientos, facturas de venta y compra, nómina importada y depreciación.
+  - Rentabilidad por proyecto y centro con prorrateo de indirectos.
+  - Entregable: el reporte de rentabilidad muestra ingresos, costos y margen por área y por proyecto.
 - **F5-10 (M): BI y reportes gerenciales.**
 
 ### Fase 6: endurecimiento, seguridad en reposo y extensibilidad
